@@ -316,12 +316,12 @@ Nebula Launchpad provides a decentralized platform that:
 - Token launch
 - Governance implementation
 
-#### Phase 2 (Q2 2024)
+#### Phase 2 (Q2 2025)
 - Enhanced IP marketplace features
 - Cross-chain integration
 - Advanced research tools
 
-#### Phase 3 (Q4 2024)
+#### Phase 3 (Q4 2025)
 - Mobile application
 - AI integration
 - Additional oracle integrations
