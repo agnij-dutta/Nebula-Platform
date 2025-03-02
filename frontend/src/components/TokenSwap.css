@@ -1,0 +1,104 @@
+.token-swap {
+    max-width: 600px;
+    margin: 2rem auto;
+    padding: 2rem;
+    background: var(--glass-bg);
+    backdrop-filter: blur(10px);
+    border: 1px solid var(--glass-border);
+    border-radius: 16px;
+    transition: all 0.3s ease;
+    animation: float 6s ease-in-out infinite;
+}
+
+.token-swap:hover {
+    box-shadow: 0 4px 20px var(--glow-shadow);
+}
+
+.token-swap h1 {
+    text-align: center;
+    background: linear-gradient(45deg, #8B5CF6, #E0E7FF);
+    background-clip: text;
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    margin-bottom: 2rem;
+    font-size: 2.5rem;
+}
+
+.swap-form {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+}
+
+.input-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.input-group label {
+    font-weight: 600;
+    color: rgba(var(--foreground-rgb), 0.8);
+}
+
+.input-group input {
+    padding: 0.8rem;
+    background: rgba(var(--foreground-rgb), 0.05);
+    border: 1px solid rgba(var(--foreground-rgb), 0.1);
+    border-radius: 8px;
+    color: rgb(var(--foreground-rgb));
+    font-size: 1rem;
+    transition: all 0.2s ease;
+}
+
+.input-group input:focus {
+    border-color: #8B5CF6;
+    box-shadow: 0 0 0 2px rgba(139, 92, 246, 0.2);
+    outline: none;
+}
+
+.expected-return {
+    text-align: center;
+    padding: 1rem;
+    background: rgba(var(--foreground-rgb), 0.05);
+    border-radius: 8px;
+    color: rgba(var(--foreground-rgb), 0.8);
+    font-weight: 500;
+    margin: 1rem 0;
+}
+
+.token-swap button {
+    padding: 1rem;
+    background: linear-gradient(45deg, #8B5CF6, #E0E7FF);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.token-swap button:hover:not(:disabled) {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px var(--glow-shadow);
+}
+
+.token-swap button:disabled {
+    background: rgba(var(--foreground-rgb), 0.1);
+    cursor: not-allowed;
+}
+
+.error {
+    color: #ef4444;
+    text-align: center;
+    margin-bottom: 1rem;
+    padding: 0.75rem;
+    background: rgba(239, 68, 68, 0.1);
+    border-radius: 8px;
+}
+
+@keyframes float {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-10px); }
+}

@@ -1,0 +1,31 @@
+{
+    "name": "Milestone Verification",
+    "type": "directrequest",
+    "schemaVersion": 1,
+    "contractAddress": "YOUR_ORACLE_CONTRACT_ADDRESS",
+    "externalJobID": "milestone-verification-v1",
+    "observationSource": "
+        decode_log   [type=ethabidecodelog
+                     abi=\"VerificationRequested(bytes32 indexed requestId, uint256 indexed projectId, uint256 indexed milestoneId, string proofCID)\"
+                     data=\"$(jobRun.logData)\"
+                     topics=\"$(jobRun.logTopics)\"]
+
+        decode_cbor  [type=cborparse data=\"$(decode_log.proofCID)\"]
+        
+        fetch        [type=bridge 
+                     name=\"milestone-adapter\"
+                     requestData=\"{\\\"id\\\": $(jobSpec.externalJobID), \\\"data\\\": {\\\"proofCID\\\": $(decode_cbor.proofCID), \\\"verificationCID\\\": $(decode_cbor.verificationCID)}}\"]
+
+        parse        [type=jsonparse path=\"data,verified\" data=\"$(fetch)\"]
+        
+        encode_data  [type=ethabiencode
+                     abi=\"(bytes32 _requestId, bool _verified)\"
+                     data=\"{\\\"_requestId\\\": $(decode_log.requestId), \\\"_verified\\\": $(parse)}\"]
+                     
+        submit_tx    [type=ethtx to=\"YOUR_ORACLE_CONTRACT_ADDRESS\" 
+                     data=\"$(encode_data)\"
+                     functionSelector=\"0x37c56bc8\"]
+
+        decode_log -> decode_cbor -> fetch -> parse -> encode_data -> submit_tx
+    "
+}

@@ -1,0 +1,247 @@
+.governance {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 2rem;
+}
+
+.governance-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 3rem;
+}
+
+.governance-header h1 {
+    font-size: 2.5rem;
+    background: linear-gradient(45deg, #8B5CF6, #E0E7FF);
+    background-clip: text;
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    margin: 0;
+}
+
+.nebl-balance {
+    background: var(--glass-bg);
+    backdrop-filter: blur(10px);
+    border: 1px solid var(--glass-border);
+    padding: 0.75rem 1.5rem;
+    border-radius: 12px;
+    color: rgb(var(--foreground-rgb));
+    animation: float 6s ease-in-out infinite;
+}
+
+.proposals-section {
+    margin-bottom: 4rem;
+}
+
+.proposals-section h2 {
+    color: rgb(var(--foreground-rgb));
+    margin-bottom: 1.5rem;
+}
+
+.proposal-card {
+    background: var(--glass-bg);
+    backdrop-filter: blur(10px);
+    border: 1px solid var(--glass-border);
+    border-radius: 16px;
+    padding: 1.5rem;
+    margin-bottom: 1.5rem;
+    transition: all 0.3s ease;
+}
+
+.proposal-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 4px 20px var(--glow-shadow);
+}
+
+.proposal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+}
+
+.proposal-header h3 {
+    margin: 0;
+    color: rgb(var(--foreground-rgb));
+}
+
+.proposal-state {
+    padding: 0.25rem 0.75rem;
+    border-radius: 16px;
+    font-size: 0.9rem;
+}
+
+.proposal-state.Active {
+    background: rgba(25, 118, 210, 0.1);
+    color: #1976d2;
+}
+
+.proposal-state.Succeeded {
+    background: rgba(46, 125, 50, 0.1);
+    color: #2e7d32;
+}
+
+.proposal-state.Defeated {
+    background: rgba(198, 40, 40, 0.1);
+    color: #c62828;
+}
+
+.proposal-state.Pending {
+    background: rgba(245, 124, 0, 0.1);
+    color: #f57c00;
+}
+
+.proposal-description {
+    color: rgba(var(--foreground-rgb), 0.8);
+    line-height: 1.6;
+    margin-bottom: 1.5rem;
+    white-space: pre-line;
+}
+
+.proposal-stats {
+    margin-bottom: 1.5rem;
+}
+
+.votes {
+    margin-bottom: 1rem;
+}
+
+.vote-bar {
+    height: 8px;
+    background: rgba(var(--foreground-rgb), 0.1);
+    border-radius: 8px;
+    overflow: hidden;
+    margin-bottom: 0.5rem;
+}
+
+.vote-bar .for {
+    height: 100%;
+    background: linear-gradient(45deg, #8B5CF6, #E0E7FF);
+    transition: width 0.3s ease;
+}
+
+.vote-numbers {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.9rem;
+    color: rgba(var(--foreground-rgb), 0.6);
+}
+
+.vote-buttons {
+    display: flex;
+    gap: 1rem;
+}
+
+.vote-buttons button {
+    flex: 1;
+    padding: 0.75rem;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: 500;
+    transition: all 0.3s ease;
+}
+
+.vote-buttons button:first-child {
+    background: linear-gradient(45deg, #22c55e, #86efac);
+    color: white;
+}
+
+.vote-buttons button:first-child:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(34, 197, 94, 0.3);
+}
+
+.vote-buttons button:last-child {
+    background: linear-gradient(45deg, #ef4444, #fca5a5);
+    color: white;
+}
+
+.vote-buttons button:last-child:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
+}
+
+.create-proposal {
+    background: var(--glass-bg);
+    backdrop-filter: blur(10px);
+    border: 1px solid var(--glass-border);
+    border-radius: 16px;
+    padding: 2rem;
+    transition: all 0.3s ease;
+}
+
+.create-proposal:hover {
+    box-shadow: 0 4px 20px var(--glow-shadow);
+}
+
+.create-proposal h2 {
+    color: rgb(var(--foreground-rgb));
+    margin-bottom: 1.5rem;
+    background: linear-gradient(45deg, #8B5CF6, #E0E7FF);
+    background-clip: text;
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+
+.form-group {
+    margin-bottom: 1.5rem;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 0.5rem;
+    color: rgba(var(--foreground-rgb), 0.8);
+    font-weight: 500;
+}
+
+.form-group input,
+.form-group textarea {
+    width: 100%;
+    padding: 0.75rem;
+    background: rgba(var(--foreground-rgb), 0.05);
+    border: 1px solid rgba(var(--foreground-rgb), 0.1);
+    border-radius: 8px;
+    color: rgb(var(--foreground-rgb));
+    font-size: 1rem;
+}
+
+.form-group textarea {
+    min-height: 120px;
+    resize: vertical;
+}
+
+.create-proposal button[type="submit"] {
+    width: 100%;
+    padding: 1rem;
+    background: linear-gradient(45deg, #8B5CF6, #E0E7FF);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-size: 1rem;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    font-weight: 500;
+}
+
+.create-proposal button[type="submit"]:hover:not(:disabled) {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px var(--glow-shadow);
+}
+
+.create-proposal button[type="submit"]:disabled {
+    background: rgba(var(--foreground-rgb), 0.1);
+    cursor: not-allowed;
+}
+
+.loading {
+    text-align: center;
+    padding: 2rem;
+    color: rgba(var(--foreground-rgb), 0.6);
+}
+
+@keyframes float {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-10px); }
+}

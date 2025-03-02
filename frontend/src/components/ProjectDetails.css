@@ -1,0 +1,219 @@
+.project-details {
+  max-width: 1200px;
+  margin: 2rem auto;
+  padding: 2rem;
+}
+
+.project-details h1 {
+  font-size: 2.5rem;
+  background: linear-gradient(45deg, #8B5CF6, #E0E7FF);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  margin-bottom: 1.5rem;
+}
+
+.project-header h1 {
+  font-size: 2.5rem;
+  margin-bottom: 1rem;
+  background: linear-gradient(45deg, #8B5CF6, #E0E7FF);
+  background-clip: text;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.project-meta {
+  display: flex;
+  gap: 2rem;
+  margin-bottom: 2rem;
+  color: rgba(var(--foreground-rgb), 0.8);
+}
+
+.category {
+  background: rgba(139, 92, 246, 0.1);
+  color: #8B5CF6;
+  padding: 0.5rem 1rem;
+  border-radius: 16px;
+  font-weight: 500;
+}
+
+.project-description {
+  background: var(--glass-bg);
+  backdrop-filter: blur(10px);
+  border: 1px solid var(--glass-border);
+  border-radius: 16px;
+  padding: 2rem;
+  margin-bottom: 3rem;
+  transition: all 0.3s ease;
+}
+
+.project-description:hover {
+  box-shadow: 0 4px 20px var(--glow-shadow);
+}
+
+.project-description h2 {
+  color: rgb(var(--foreground-rgb));
+  margin-bottom: 1rem;
+  font-size: 1.8rem;
+}
+
+.project-description p {
+  line-height: 1.8;
+  color: rgba(var(--foreground-rgb), 0.8);
+}
+
+.funding-status {
+  background: var(--glass-bg);
+  backdrop-filter: blur(10px);
+  border: 1px solid var(--glass-border);
+  border-radius: 16px;
+  padding: 2rem;
+  margin-bottom: 3rem;
+}
+
+.progress-bar {
+  height: 12px;
+  background: rgba(var(--foreground-rgb), 0.1);
+  border-radius: 6px;
+  overflow: hidden;
+  margin: 1rem 0;
+}
+
+.progress-bar .progress {
+  height: 100%;
+  background: linear-gradient(45deg, #8B5CF6, #E0E7FF);
+  transition: width 0.5s ease;
+}
+
+.funding-numbers {
+  display: flex;
+  justify-content: space-between;
+  color: rgba(var(--foreground-rgb), 0.8);
+  font-weight: 500;
+}
+
+.milestones {
+  margin-bottom: 3rem;
+}
+
+.milestone {
+  background: var(--glass-bg);
+  backdrop-filter: blur(10px);
+  border: 1px solid var(--glass-border);
+  border-radius: 16px;
+  padding: 1.5rem;
+  margin-bottom: 1.5rem;
+  transition: all 0.3s ease;
+}
+
+.milestone:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 4px 20px var(--glow-shadow);
+}
+
+.milestone.completed {
+  border-left: 4px solid #22c55e;
+}
+
+.milestone-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.milestone-verification {
+  margin-top: 1.5rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid #e5e7eb;
+}
+
+.milestone-actions {
+  display: flex;
+  gap: 1rem;
+  margin-top: 1rem;
+}
+
+.status {
+  padding: 0.25rem 0.75rem;
+  border-radius: 16px;
+  font-size: 0.9rem;
+  background: rgba(245, 124, 0, 0.1);
+  color: #f57c00;
+}
+
+.status.completed {
+  background: rgba(46, 125, 50, 0.1);
+  color: #2e7d32;
+}
+
+.milestone-funding {
+  margin-top: 1rem;
+}
+
+.milestone-progress-bar {
+  height: 8px;
+  background-color: #eee;
+  border-radius: 4px;
+  overflow: hidden;
+  margin-bottom: 0.5rem;
+}
+
+.milestone-progress-bar .progress {
+  height: 100%;
+  background-color: #3498db;
+  transition: width 0.3s ease;
+}
+
+.funding-form {
+  background: var(--glass-bg);
+  backdrop-filter: blur(10px);
+  border: 1px solid var(--glass-border);
+  border-radius: 16px;
+  padding: 2rem;
+}
+
+.input-group {
+  display: flex;
+  gap: 1rem;
+}
+
+.input-group input {
+  flex: 1;
+  padding: 0.75rem;
+  background: rgba(var(--foreground-rgb), 0.05);
+  border: 1px solid rgba(var(--foreground-rgb), 0.1);
+  border-radius: 8px;
+  color: rgb(var(--foreground-rgb));
+  font-size: 1rem;
+}
+
+.input-group button {
+  padding: 0.75rem 2rem;
+  background: linear-gradient(45deg, #8B5CF6, #E0E7FF);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  font-weight: 500;
+}
+
+.input-group button:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px var(--glow-shadow);
+}
+
+.input-group button:disabled {
+  background: rgba(var(--foreground-rgb), 0.1);
+  cursor: not-allowed;
+}
+
+.loading, .error {
+  text-align: center;
+  padding: 3rem;
+  color: rgba(var(--foreground-rgb), 0.6);
+}
+
+.error {
+  color: #ef4444;
+}

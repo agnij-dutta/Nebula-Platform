@@ -1,0 +1,103 @@
+.milestone-verification {
+    background: var(--glass-bg);
+    backdrop-filter: blur(10px);
+    border: 1px solid var(--glass-border);
+    border-radius: 16px;
+    padding: 1.5rem;
+    margin: 1rem 0;
+    transition: all 0.3s ease;
+}
+
+.milestone-verification:hover {
+    box-shadow: 0 4px 20px var(--glow-shadow);
+}
+
+.milestone-verification h3 {
+    margin: 0 0 1.5rem;
+    background: linear-gradient(45deg, #8B5CF6, #E0E7FF);
+    background-clip: text;
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+
+.form-group {
+    margin-bottom: 1.5rem;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 0.5rem;
+    font-weight: 500;
+    color: rgba(var(--foreground-rgb), 0.8);
+}
+
+.form-group input[type="file"] {
+    width: 100%;
+    padding: 0.75rem;
+    border: 2px dashed rgba(var(--foreground-rgb), 0.2);
+    border-radius: 8px;
+    background: rgba(var(--foreground-rgb), 0.05);
+    cursor: pointer;
+    transition: all 0.2s ease;
+    color: rgb(var(--foreground-rgb));
+}
+
+.form-group input[type="file"]:hover {
+    border-color: #8B5CF6;
+    background: rgba(139, 92, 246, 0.05);
+}
+
+.form-group small {
+    display: block;
+    margin-top: 0.5rem;
+    color: rgba(var(--foreground-rgb), 0.6);
+    font-size: 0.875rem;
+}
+
+.submit-button {
+    width: 100%;
+    padding: 0.75rem 1.5rem;
+    background: linear-gradient(45deg, #8B5CF6, #E0E7FF);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.submit-button:hover:not(:disabled) {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px var(--glow-shadow);
+}
+
+.submit-button:disabled {
+    background: rgba(var(--foreground-rgb), 0.1);
+    cursor: not-allowed;
+}
+
+.error {
+    padding: 0.75rem;
+    margin-bottom: 1rem;
+    background: rgba(239, 68, 68, 0.1);
+    border: 1px solid rgba(239, 68, 68, 0.2);
+    border-radius: 8px;
+    color: #ef4444;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+.submit-button:disabled::after {
+    content: '';
+    display: inline-block;
+    width: 1rem;
+    height: 1rem;
+    margin-left: 0.5rem;
+    border: 2px solid rgba(var(--foreground-rgb), 0.2);
+    border-radius: 50%;
+    border-right-color: rgb(var(--foreground-rgb));
+    animation: spin 1s linear infinite;
+    vertical-align: middle;
+}

@@ -1,0 +1,275 @@
+/* Space Theme Variables */
+:root {
+  --foreground-rgb: 255, 255, 255;
+  --background-start-rgb: 15, 23, 42;
+  --background-end-rgb: 10, 15, 30;
+  --nebula-purple: 139, 92, 246;
+  --nebula-light: 224, 231, 255;
+  --glass-bg: rgba(15, 23, 42, 0.7);
+  --glass-border: rgba(139, 92, 246, 0.2);
+  --glow-shadow: rgba(139, 92, 246, 0.3);
+}
+
+.App {
+    text-align: center;
+    min-height: 100vh;
+    background: linear-gradient(
+        to bottom,
+        rgb(var(--background-start-rgb)),
+        rgb(var(--background-end-rgb))
+    );
+    color: rgb(var(--foreground-rgb));
+}
+
+.App-logo {
+    height: 40vmin;
+    pointer-events: none;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+    .App-logo {
+        animation: App-logo-spin infinite 20s linear;
+    }
+}
+
+.App-header {
+    background: var(--glass-bg);
+    backdrop-filter: blur(10px);
+    border-bottom: 1px solid var(--glass-border);
+    padding: 1rem 0;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+}
+
+.header-content {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 2rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 20px;
+}
+
+.nav-links {
+    display: flex;
+    gap: 2rem;
+}
+
+.nav-links a {
+    text-decoration: none;
+    color: rgb(var(--foreground-rgb));
+    padding: 0.5rem 1rem;
+    border-radius: 8px;
+    transition: all 0.2s ease;
+}
+
+.nav-links a:hover {
+    background: rgba(139, 92, 246, 0.1);
+}
+
+.nav-links a.active {
+    background: rgba(139, 92, 246, 0.2);
+    color: #8B5CF6;
+}
+
+.wallet-section {
+    display: flex;
+    align-items: center;
+}
+
+.connect-button {
+    background: linear-gradient(45deg, #8B5CF6, #E0E7FF);
+    color: white;
+    border: none;
+    padding: 0.75rem 1.5rem;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    font-weight: 500;
+}
+
+.connect-button:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px var(--glow-shadow);
+}
+
+.account-container {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+}
+
+.account-info {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    font-family: monospace;
+    background-color: rgba(97, 218, 251, 0.1);
+    padding: 8px 16px;
+    border-radius: 4px;
+}
+
+.address {
+    background-color: #f8f9fa;
+    padding: 0.5rem 1rem;
+    border-radius: 4px;
+    color: #2c3e50;
+}
+
+.network-switch-button {
+    background-color: #ff6b6b;
+    color: white;
+    border: none;
+    padding: 8px 16px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 14px;
+    transition: background-color 0.3s;
+}
+
+.network-switch-button:hover {
+    background-color: #e95555;
+}
+
+.network-button {
+    padding: 0.5rem 1rem;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.network-button.error {
+    background-color: #fee2e2;
+    color: #ef4444;
+}
+
+.network-button.error:hover {
+    background-color: #fecaca;
+}
+
+.view-toggle {
+    display: flex;
+    gap: 10px;
+}
+
+.toggle-button {
+    background: transparent;
+    color: #fff;
+    border: 2px solid #61dafb;
+    padding: 8px 16px;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.3s;
+}
+
+.toggle-button:hover {
+    background-color: rgba(97, 218, 251, 0.1);
+}
+
+.toggle-button.active {
+    background-color: #61dafb;
+    color: #282c34;
+}
+
+.error-message {
+    background-color: #ffebee;
+    color: #c62828;
+    padding: 12px;
+    margin: 20px;
+    border-radius: 4px;
+    border: 1px solid #ef9a9a;
+}
+
+.error-banner {
+    background-color: #fee2e2;
+    color: #ef4444;
+    padding: 1rem;
+    text-align: center;
+}
+
+.wrong-network-message {
+    background-color: #fff3e0;
+    color: #e65100;
+    padding: 12px;
+    margin: 20px;
+    border-radius: 4px;
+    border: 1px solid #ffb74d;
+    font-weight: 500;
+}
+
+.main-content {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 20px;
+}
+
+.App-content {
+    min-height: calc(100vh - 80px);
+    padding: 2rem 0;
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
+.loading {
+    text-align: center;
+    padding: 2rem;
+    color: #666;
+}
+
+.error {
+    color: #ef4444;
+    margin: 1rem 0;
+}
+
+@keyframes App-logo-spin {
+    from {
+        transform: rotate(0deg);
+    }
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+@media (max-width: 768px) {
+    .header-content {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .wallet-section {
+        justify-content: center;
+    }
+
+    .account-container {
+        flex-direction: column;
+    }
+
+    .view-toggle {
+        justify-content: center;
+    }
+}
+
+.wallet-controls {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.disconnect-button {
+    padding: 0.5rem 1rem;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    background: transparent;
+    color: white;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.disconnect-button:hover {
+    background: rgba(255, 255, 255, 0.1);
+    border-color: rgba(255, 255, 255, 0.3);
+}

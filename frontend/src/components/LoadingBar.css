@@ -1,0 +1,69 @@
+.loading-bar-container {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    z-index: 1000;
+}
+
+.loading-bar {
+    height: 3px;
+    background: linear-gradient(
+        90deg,
+        transparent,
+        #8B5CF6,
+        #E0E7FF,
+        #8B5CF6,
+        transparent
+    );
+    background-size: 200% 100%;
+    animation: shimmer 2s infinite;
+    position: relative;
+    overflow: hidden;
+}
+
+.loading-bar::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(
+        90deg,
+        transparent,
+        rgba(255, 255, 255, 0.4),
+        transparent
+    );
+    transform: translateX(-100%);
+    animation: shine 1.5s infinite;
+}
+
+.loading-glow {
+    position: absolute;
+    top: -2px;
+    height: 7px;
+    width: 100%;
+    background: radial-gradient(
+        ellipse at center,
+        rgba(139, 92, 246, 0.3) 0%,
+        transparent 70%
+    );
+    filter: blur(3px);
+    opacity: 0.7;
+    animation: pulse 2s ease-in-out infinite;
+}
+
+@keyframes shimmer {
+    0% { background-position: 200% 0; }
+    100% { background-position: -200% 0; }
+}
+
+@keyframes shine {
+    100% { transform: translateX(100%); }
+}
+
+@keyframes pulse {
+    0%, 100% { opacity: 0.5; }
+    50% { opacity: 0.8; }
+}

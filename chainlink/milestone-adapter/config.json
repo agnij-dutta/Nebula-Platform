@@ -1,0 +1,21 @@
+{
+  "port": 8080,
+  "ipfs": {
+    "node": "https://ipfs.infura.io:5001/api/v0",
+    "gateway": "https://ipfs.io/ipfs"
+  },
+  "chainlink": {
+    "jobId": "milestone-verification-v1",
+    "payment": "100000000000000000" // 0.1 LINK
+  },
+  "verification": {
+    "timeout": 30000,
+    "retries": 3,
+    "requiredFields": [
+      "description",
+      "proofDocuments",
+      "completionDate",
+      "metrics"
+    ]
+  }
+}

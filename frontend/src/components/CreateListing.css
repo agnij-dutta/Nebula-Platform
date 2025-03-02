@@ -1,0 +1,194 @@
+.create-listing {
+    max-width: 800px;
+    margin: 2rem auto;
+    padding: 2rem;
+    background: var(--glass-bg);
+    backdrop-filter: blur(10px);
+    border: 1px solid var(--glass-border);
+    border-radius: 16px;
+    transition: all 0.3s ease;
+}
+
+.create-listing:hover {
+    box-shadow: 0 4px 20px var(--glow-shadow);
+}
+
+.create-listing h2 {
+    margin-bottom: 1.5rem;
+    background: linear-gradient(45deg, #8B5CF6, #E0E7FF);
+    background-clip: text;
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    font-size: 2.2rem;
+}
+
+.create-listing form {
+    margin-top: 2rem;
+}
+
+.create-listing .form-group {
+    margin-bottom: 1.5rem;
+}
+
+.create-listing label {
+    display: block;
+    margin-bottom: 0.5rem;
+    color: rgba(var(--foreground-rgb), 0.8);
+    font-weight: 500;
+}
+
+.create-listing .form-group.checkbox label {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    cursor: pointer;
+}
+
+.create-listing input[type="number"],
+.create-listing input[type="text"] {
+    width: 100%;
+    padding: 0.75rem;
+    background: rgba(var(--foreground-rgb), 0.05);
+    border: 1px solid rgba(var(--foreground-rgb), 0.1);
+    border-radius: 8px;
+    color: rgb(var(--foreground-rgb));
+    font-size: 1rem;
+    transition: all 0.2s ease;
+}
+
+.create-listing input:focus,
+.create-listing textarea:focus {
+    outline: none;
+    border-color: #8B5CF6;
+    box-shadow: 0 0 0 2px rgba(139, 92, 246, 0.2);
+}
+
+.create-listing input[type="checkbox"] {
+    margin: 0;
+    cursor: pointer;
+}
+
+.create-listing .help-text {
+    display: block;
+    margin-top: 0.25rem;
+    color: #7f8c8d;
+    font-size: 0.875rem;
+}
+
+.create-listing button {
+    width: 100%;
+    padding: 0.75rem;
+    background-color: #3498db;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    font-size: 1rem;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+.create-listing button:hover:not(:disabled) {
+    background-color: #2980b9;
+}
+
+.create-listing button:disabled {
+    background-color: #bdc3c7;
+    cursor: not-allowed;
+}
+
+.error-message {
+    background: rgba(239, 68, 68, 0.1);
+    color: #ef4444;
+    padding: 1rem;
+    border-radius: 8px;
+    margin-bottom: 1rem;
+    border: 1px solid rgba(239, 68, 68, 0.2);
+}
+
+/* Responsive adjustments */
+@media (max-width: 600px) {
+    .create-listing {
+        margin: 1rem;
+        padding: 1rem;
+    }
+}
+
+.preview-section {
+    margin-top: 2rem;
+    padding: 1.5rem;
+    background: rgba(var(--foreground-rgb), 0.05);
+    border: 1px solid rgba(var(--foreground-rgb), 0.1);
+    border-radius: 12px;
+}
+
+.preview-section h3 {
+    margin-bottom: 1rem;
+    color: rgb(var(--foreground-rgb));
+    font-size: 1.2rem;
+}
+
+.token-preview {
+    background: var(--glass-bg);
+    backdrop-filter: blur(10px);
+    border: 1px solid var(--glass-border);
+    border-radius: 12px;
+    padding: 1.5rem;
+    margin-bottom: 1.5rem;
+    transition: all 0.3s ease;
+}
+
+.token-preview:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 4px 12px var(--glow-shadow);
+}
+
+.submit-button {
+    width: 100%;
+    padding: 1rem;
+    background: linear-gradient(45deg, #8B5CF6, #E0E7FF);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-size: 1.125rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    margin-top: 2rem;
+}
+
+.submit-button:hover:not(:disabled) {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px var(--glow-shadow);
+}
+
+.submit-button:disabled {
+    background: rgba(var(--foreground-rgb), 0.1);
+    cursor: not-allowed;
+}
+
+.loading-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(15, 23, 42, 0.8);
+    backdrop-filter: blur(8px);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+}
+
+.loading-spinner {
+    width: 40px;
+    height: 40px;
+    border: 3px solid rgba(139, 92, 246, 0.1);
+    border-top-color: #8B5CF6;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}

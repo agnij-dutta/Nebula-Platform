@@ -1,0 +1,106 @@
+.owned-tokens {
+    margin-bottom: 2rem;
+}
+
+.owned-tokens h3 {
+    margin-bottom: 1rem;
+    background: linear-gradient(45deg, #8B5CF6, #E0E7FF);
+    background-clip: text;
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    font-size: 1.8rem;
+}
+
+.token-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+    gap: 1.5rem;
+}
+
+.token-card {
+    padding: 1.5rem;
+    background: var(--glass-bg);
+    backdrop-filter: blur(10px);
+    border: 1px solid var(--glass-border);
+    border-radius: 16px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    position: relative;
+    overflow: hidden;
+}
+
+.token-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 4px 20px var(--glow-shadow);
+}
+
+.token-card.selected {
+    border-color: #8B5CF6;
+    box-shadow: 0 0 0 2px rgba(139, 92, 246, 0.3);
+}
+
+.token-card h4 {
+    margin: 0 0 0.5rem;
+    color: rgb(var(--foreground-rgb));
+    font-size: 1.2rem;
+}
+
+.token-card .token-id {
+    color: rgba(var(--foreground-rgb), 0.6);
+    font-size: 0.9rem;
+    margin: 0 0 0.5rem;
+}
+
+.token-card .description {
+    color: rgba(var(--foreground-rgb), 0.8);
+    font-size: 0.95rem;
+    margin: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    display: -webkit-box;
+    line-clamp: 2;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    line-height: 1.5;
+}
+
+.listed-badge {
+    position: absolute;
+    top: 0.5rem;
+    right: 0.5rem;
+    background: linear-gradient(45deg, #ef4444, #fca5a5);
+    color: white;
+    padding: 0.25rem 0.75rem;
+    border-radius: 8px;
+    font-size: 0.8rem;
+    font-weight: 500;
+}
+
+.loading, .no-tokens {
+    padding: 2rem;
+    text-align: center;
+    color: rgba(var(--foreground-rgb), 0.6);
+    background: rgba(var(--foreground-rgb), 0.05);
+    border-radius: 16px;
+    border: 1px solid rgba(var(--foreground-rgb), 0.1);
+}
+
+@keyframes shimmer {
+    0% {
+        background-position: -200% 0;
+    }
+    100% {
+        background-position: 200% 0;
+    }
+}
+
+.loading .token-card {
+    background: linear-gradient(
+        90deg,
+        var(--glass-bg) 25%,
+        rgba(139, 92, 246, 0.1) 50%,
+        var(--glass-bg) 75%
+    );
+    background-size: 200% 100%;
+    animation: shimmer 2s infinite;
+}
