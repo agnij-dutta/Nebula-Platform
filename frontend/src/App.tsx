@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { BrowserRouter as Router, Routes, Route, Link } from 'react-router-dom';
 import { useWeb3 } from './web3/hooks/useWeb3';
 import { WEB3_CONFIG } from './web3/config';

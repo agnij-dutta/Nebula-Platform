@@ -92,16 +92,6 @@ interface VerificationRequest {
     customParams?: Record<string, any>;
 }
 
-interface WatchAssetParams {
-    type: 'ERC20';
-    options: {
-        address: string;
-        symbol: string;
-        decimals: number;
-        image?: string;
-    };
-}
-
 export class ContractInterface {
     private provider: ethers.providers.Web3Provider;
     private signer: ethers.Signer;
@@ -137,12 +127,38 @@ export class ContractInterface {
 
     async getNEBLToken() {
         if (!this.signer) throw new Error("No signer available");
-        const address = this.getContractAddress('NEBLToken');
-        return new ethers.Contract(
-            address,
-            NEBLTokenABI.abi,
-            this.signer
-        );
+        
+        try {
+            const address = this.getContractAddress('NEBLToken');
+            const contract = new ethers.Contract(
+                address,
+                NEBLTokenABI.abi,
+                this.signer
+            );
+
+            // Basic contract existence check
+            const code = await this.provider.getCode(address);
+            if (code === '0x') {
+                throw new Error('NEBL token contract not deployed at specified address');
+            }
+
+            // Verify correct network
+            const network = await this.provider.getNetwork();
+            if (network.chainId !== WEB3_CONFIG.NETWORKS.TESTNET.chainId) {
+                throw new Error(`Please switch to ${WEB3_CONFIG.NETWORKS.TESTNET.name}`);
+            }
+
+            // Test contract responsiveness with a simple view call
+            await contract.balanceOf(address);
+            
+            return contract;
+        } catch (error: any) {
+            console.error('Error initializing NEBL token:', error);
+            if (error.code === 'CALL_EXCEPTION') {
+                throw new Error('Failed to interact with NEBL token contract. Please verify contract deployment.');
+            }
+            throw error;
+        }
     }
 
     async getResearchProject() {
@@ -333,8 +349,31 @@ export class ContractInterface {
     }
 
     async getNeblBalance(address: string): Promise<ethers.BigNumber> {
-        const neblToken = await this.getNEBLToken();
-        return await neblToken.balanceOf(address);
+        try {
+            // Verify network first to avoid unnecessary contract calls
+            const network = await this.provider.getNetwork();
+            if (network.chainId !== WEB3_CONFIG.NETWORKS.TESTNET.chainId) {
+                throw new Error(`Please switch to ${WEB3_CONFIG.NETWORKS.TESTNET.name}`);
+            }
+
+            const neblToken = await this.getNEBLToken();
+            
+            const balance = await Promise.race([
+                neblToken.balanceOf(address),
+                new Promise((_, reject) => 
+                    setTimeout(() => reject(new Error('Balance fetch timeout')), 
+                    WEB3_CONFIG.ETHERS_CONFIG.timeout)
+                )
+            ]);
+
+            return balance || ethers.BigNumber.from(0);
+        } catch (error: any) {
+            console.error('Failed to get NEBL balance:', error);
+            if (error.code === 'NETWORK_ERROR') {
+                throw new Error('Network connection error. Please check your connection and try again.');
+            }
+            throw new Error(error.message || 'Failed to fetch NEBL balance. Please ensure you are connected to the correct network.');
+        }
     }
 
     // Research Project methods
@@ -625,35 +664,112 @@ export class ContractInterface {
     }
 
     async swapAVAXForNEBL(avaxAmount: string) {
-        const neblSwap = await this.getNeblSwap();
-        const avaxAmountWei = ethers.utils.parseEther(avaxAmount);
-        
-        // First check NEBL balance of swap contract
-        const neblToken = await this.getNEBLToken();
-        const swapBalance = await neblToken.balanceOf(neblSwap.address);
-        const expectedNebl = await neblSwap.calculateNEBLAmount(avaxAmountWei);
-        
-        if (swapBalance.lt(expectedNebl)) {
-            throw new Error("Insufficient liquidity in swap contract");
-        }
-
-        // Estimate gas to ensure transaction will succeed
         try {
-            await neblSwap.estimateGas.swapAVAXForNEBL({
+            // Verify network first
+            const network = await this.provider.getNetwork();
+            if (network.chainId !== WEB3_CONFIG.NETWORKS.TESTNET.chainId) {
+                throw new Error(`Please switch to ${WEB3_CONFIG.NETWORKS.TESTNET.name}`);
+            }
+
+            const neblSwap = await this.getNeblSwap();
+            const avaxAmountWei = ethers.utils.parseEther(avaxAmount);
+            
+            // Get expected NEBL amount first
+            const expectedNebl = await neblSwap.calculateNEBLAmount(avaxAmountWei);
+            if (!expectedNebl || expectedNebl.isZero()) {
+                throw new Error("Invalid swap amount");
+            }
+
+            // Verify contract state and liquidity
+            const neblToken = await this.getNEBLToken();
+            const swapBalance = await neblToken.balanceOf(neblSwap.address);
+            
+            // Add 1% buffer to the expected amount to account for any price changes
+            const requiredLiquidity = expectedNebl.mul(101).div(100);
+            if (swapBalance.lt(requiredLiquidity)) {
+                throw new Error("Insufficient liquidity in swap contract");
+            }
+
+            // Verify AVAX price feed is working
+            const latestPrice = await neblSwap.getLatestAVAXPrice();
+            if (!latestPrice || latestPrice.isZero()) {
+                throw new Error("Price feed error");
+            }
+
+            // Get current network conditions for optimal gas settings
+            const [gasPrice, baseFeePerGas] = await Promise.all([
+                this.provider.getGasPrice(),
+                this.provider.send('eth_maxPriorityFeePerGas', [])
+            ]);
+
+            const maxPriorityFeePerGas = ethers.BigNumber.from(baseFeePerGas);
+            const maxFeePerGas = gasPrice.mul(110).div(100); // Base fee + 10%
+
+            // Estimate gas with the exact parameters
+            const gasEstimate = await neblSwap.estimateGas.swapAVAXForNEBL({
                 value: avaxAmountWei
             });
-        } catch (error) {
-            console.error('Gas estimation failed:', error);
-            throw new Error("Transaction would fail - please try a different amount");
+
+            // Add larger buffer for swap operations
+            const gasLimit = gasEstimate.mul(130).div(100); // Add 30% buffer for swaps
+
+            // Execute swap with optimized settings
+            const tx = await neblSwap.swapAVAXForNEBL({
+                value: avaxAmountWei,
+                maxFeePerGas,
+                maxPriorityFeePerGas,
+                gasLimit
+            });
+
+            // Wait for confirmation with timeout and retry logic
+            let receipt = null;
+            let retries = 3;
+            
+            while (retries > 0 && !receipt) {
+                try {
+                    receipt = await Promise.race([
+                        tx.wait(1),
+                        new Promise((_, reject) => 
+                            setTimeout(() => reject(new Error('Transaction confirmation timeout')), 
+                            WEB3_CONFIG.ETHERS_CONFIG.timeout)
+                        )
+                    ]);
+                    break;
+                } catch (err) {
+                    console.warn('Waiting for transaction confirmation...', err);
+                    retries--;
+                    if (retries === 0) throw err;
+                    await new Promise(resolve => setTimeout(resolve, 5000));
+                }
+            }
+
+            // Verify the swap was successful
+            const swapEvent = receipt.events?.find(
+                (e: ethers.Event) => e.event === 'SwapAVAXForNEBL'
+            );
+            
+            if (!swapEvent) {
+                throw new Error('Swap transaction completed but no event found. Please check your balance.');
+            }
+
+            // Get the current address before setting up the timeout
+            const address = await this.signer.getAddress();
+
+            // Update token balance after swap (optimistic update)
+            setTimeout(() => this.getNeblBalance(address), 1000);
+
+            return receipt;
+        } catch (error: any) {
+            console.error('Swap failed:', error);
+            if (error.code === 4001) {
+                throw new Error('Transaction rejected by user');
+            } else if (error.code === -32603) {
+                throw new Error('Network error. Please verify your connection and try again.');
+            } else if (error.message.includes('price feed')) {
+                throw new Error('Price feed error. Please try again in a few minutes.');
+            }
+            throw new Error(error.message || 'Swap failed. Please try again.');
         }
-
-        // Perform the swap with explicit gas limit for safety
-        const tx = await neblSwap.swapAVAXForNEBL({
-            value: avaxAmountWei,
-            gasLimit: 300000 // Add explicit gas limit
-        });
-
-        return tx;
     }
 
     async watchToken() {

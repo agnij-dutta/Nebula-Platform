@@ -45,47 +45,63 @@ export function useWeb3() {
     }, [clearConnectionTimeout]);
 
     const switchToFujiTestnet = useCallback(async (): Promise<void> => {
-        if (!window.ethereum) return;
+        if (!window.ethereum) {
+            throw new Error('MetaMask is not installed');
+        }
         
         setIsNetworkSwitching(true);
         try {
-            await window.ethereum.request({
-                method: 'wallet_switchEthereumChain',
-                params: [{ chainId: `0x${WEB3_CONFIG.NETWORKS.TESTNET.chainId.toString(16)}` }],
-            });
-        } catch (switchError: any) {
-            // This error code means the chain has not been added to MetaMask
-            if (switchError.code === 4902) {
-                try {
+            // Clear any existing errors
+            setError('');
+            
+            // Get current chain ID first
+            const currentChainId = await window.ethereum.request({ method: 'eth_chainId' });
+            if (currentChainId === `0x${WEB3_CONFIG.NETWORKS.TESTNET.chainId.toString(16)}`) {
+                setIsNetworkSwitching(false);
+                return; // Already on correct network
+            }
+
+            try {
+                await window.ethereum.request({
+                    method: 'wallet_switchEthereumChain',
+                    params: [{ chainId: `0x${WEB3_CONFIG.NETWORKS.TESTNET.chainId.toString(16)}` }],
+                });
+            } catch (switchError: any) {
+                // This error code means the chain has not been added to MetaMask
+                if (switchError.code === 4902) {
                     await window.ethereum.request({
                         method: 'wallet_addEthereumChain',
                         params: [{
                             chainId: `0x${WEB3_CONFIG.NETWORKS.TESTNET.chainId.toString(16)}`,
-                            chainName: WEB3_CONFIG.NETWORKS.TESTNET.name,
+                            chainName: WEB3_CONFIG.NETWORKS.TESTNET.chainName,
                             nativeCurrency: WEB3_CONFIG.NETWORKS.TESTNET.nativeCurrency,
                             rpcUrls: [WEB3_CONFIG.NETWORKS.TESTNET.rpcUrl],
                             blockExplorerUrls: [WEB3_CONFIG.NETWORKS.TESTNET.blockExplorerUrl]
                         }]
                     });
-                    // Try switching again after adding the network
-                    await window.ethereum.request({
-                        method: 'wallet_switchEthereumChain',
-                        params: [{ chainId: `0x${WEB3_CONFIG.NETWORKS.TESTNET.chainId.toString(16)}` }],
-                    });
-                } catch (addError: any) {
-                    console.error('Failed to add network:', addError);
-                    setError(`Failed to add ${WEB3_CONFIG.NETWORKS.TESTNET.name}: ${addError.message}`);
-                    throw addError;
+                } else if (switchError.code === -32002) {
+                    throw new Error('Network switch already pending in wallet. Please check MetaMask.');
+                } else if (switchError.code === 4001) {
+                    throw new Error('User rejected network switch.');
+                } else {
+                    throw switchError;
                 }
-            } else {
-                console.error('Failed to switch network:', switchError);
-                setError(`Failed to switch to ${WEB3_CONFIG.NETWORKS.TESTNET.name}: ${switchError.message}`);
-                throw switchError;
             }
+            
+            // Verify the switch was successful
+            const newChainId = await window.ethereum.request({ method: 'eth_chainId' });
+            if (newChainId !== `0x${WEB3_CONFIG.NETWORKS.TESTNET.chainId.toString(16)}`) {
+                throw new Error('Failed to switch network. Please try manually.');
+            }
+            
+        } catch (error: any) {
+            console.error('Network switch failed:', error);
+            setError(error.message || 'Failed to switch network');
+            throw error;
         } finally {
             setIsNetworkSwitching(false);
         }
-    }, []);
+    }, [setError]);
 
     const initializeWeb3 = useCallback(async () => {
         if (!window.ethereum) {
@@ -137,9 +153,8 @@ export function useWeb3() {
             throw new Error('MetaMask is not installed');
         }
 
-        // Check global lock first
         if (isConnectionInProgress) {
-            throw new Error('Please check MetaMask. A connection request is already pending.');
+            throw new Error('Connection already in progress');
         }
 
         try {
@@ -147,58 +162,65 @@ export function useWeb3() {
             setError('');
             isConnectionInProgress = true;
 
-            // Set a timeout to clear the lock after 30 seconds
+            // Set a timeout to clear the connection lock
             connectionLockTimeout = setTimeout(() => {
                 clearConnectionLock();
                 setIsConnecting(false);
-                setError('Connection request timed out. Please try again.');
-            }, 30000);
+                setError('Connection request timed out');
+            }, WEB3_CONFIG.CONNECTION_CONFIG.timeoutMs);
 
-            // Quick check for existing accounts
-            const existingAccounts = await window.ethereum.request({ 
-                method: 'eth_accounts' 
-            });
+            // Try to connect with retries
+            let retryCount = 0;
+            let success = false;
 
-            // Only proceed with connection if no accounts or not connected
-            if (!existingAccounts || existingAccounts.length === 0) {
-                const accounts = await window.ethereum.request({ 
-                    method: 'eth_requestAccounts'
-                });
-                
-                if (!accounts || accounts.length === 0) {
-                    throw new Error('Please unlock your MetaMask wallet');
+            while (!success && retryCount < WEB3_CONFIG.CONNECTION_CONFIG.retryCount) {
+                try {
+                    const accounts = await window.ethereum.request({
+                        method: 'eth_requestAccounts'
+                    });
+
+                    if (!accounts || accounts.length === 0) {
+                        throw new Error('No accounts found');
+                    }
+
+                    // Initialize Web3 provider
+                    const web3Provider = new ethers.providers.Web3Provider(window.ethereum, 'any');
+                    const network = await web3Provider.getNetwork();
+                    
+                    setProvider(web3Provider);
+                    setAccount(accounts[0]);
+                    setChainId(network.chainId);
+                    setContractInterface(new ContractInterface(web3Provider));
+                    setIsInitialized(true);
+                    setNeedsWallet(false);
+
+                    // Switch network if needed
+                    if (network.chainId !== WEB3_CONFIG.NETWORKS.TESTNET.chainId) {
+                        await switchToFujiTestnet();
+                    }
+
+                    success = true;
+                    localStorage.setItem(WALLET_CONNECTED_KEY, 'true');
+                } catch (err: any) {
+                    retryCount++;
+                    if (retryCount >= WEB3_CONFIG.CONNECTION_CONFIG.retryCount) {
+                        throw err;
+                    }
+                    await new Promise(resolve => 
+                        setTimeout(resolve, WEB3_CONFIG.CONNECTION_CONFIG.retryDelayMs)
+                    );
                 }
             }
-
-            // Initialize provider
-            const web3Provider = new ethers.providers.Web3Provider(window.ethereum, 'any');
-            const network = await web3Provider.getNetwork();
-            
-            // Set initial state
-            setProvider(web3Provider);
-            setAccount(existingAccounts?.[0] || (await web3Provider.listAccounts())[0]);
-            setChainId(network.chainId);
-            setContractInterface(new ContractInterface(web3Provider));
-            setIsInitialized(true);
-            setNeedsWallet(false);
-
-            // Switch network if needed
-            if (network.chainId !== WEB3_CONFIG.NETWORKS.TESTNET.chainId) {
-                await switchToFujiTestnet();
-            }
-
-            // If connection is successful, store the state
-            localStorage.setItem(WALLET_CONNECTED_KEY, 'true');
         } catch (err: any) {
             console.error('Wallet connection error:', err);
             resetConnectionState();
             
             if (err.code === 4001) {
-                throw new Error('Please accept the connection request in your wallet');
-            } else if (err.code === -32002 || err.message?.includes('already pending')) {
-                throw new Error('Please check MetaMask. A connection request is already pending.');
+                throw new Error('Please accept the connection request in MetaMask');
+            } else if (err.code === -32002) {
+                throw new Error('Connection request already pending. Please check MetaMask');
             } else if (err.code === -32603) {
-                throw new Error('MetaMask is locked. Please unlock your wallet.');
+                throw new Error('Network connection error. Please check your wallet and try again');
             } else {
                 throw new Error(err.message || 'Failed to connect wallet');
             }
@@ -239,7 +261,7 @@ export function useWeb3() {
         return () => {
             clearConnectionLock();
         };
-    }, [isInitialized, isConnecting, initializeWeb3]);
+    }, [isInitialized, isConnecting, initializeWeb3, clearConnectionLock]);
 
     // Setup event listeners
     useEffect(() => {
@@ -258,18 +280,24 @@ export function useWeb3() {
 
             const handleChainChanged = async (newChainId: string) => {
                 clearConnectionTimeout();
-                const chainIdNum = parseInt(newChainId);
+                const chainIdNum = parseInt(newChainId, 16);
                 setChainId(chainIdNum);
                 
                 if (chainIdNum !== WEB3_CONFIG.NETWORKS.TESTNET.chainId) {
                     setError(`Please switch to ${WEB3_CONFIG.NETWORKS.TESTNET.name}`);
+                    try {
+                        await switchToFujiTestnet();
+                    } catch (err) {
+                        console.error('Auto network switch failed:', err);
+                    }
                 } else {
                     setError('');
                     await initializeWeb3();
                 }
             };
 
-            const handleDisconnect = () => {
+            const handleDisconnect = (error: { code: number; message: string }) => {
+                console.log('Wallet disconnect event:', error);
                 resetConnectionState();
             };
 
@@ -287,7 +315,12 @@ export function useWeb3() {
                 }
             };
         }
-    }, [provider, initializeWeb3, resetConnectionState, clearConnectionTimeout]);
+    }, [provider, initializeWeb3, resetConnectionState, clearConnectionTimeout, switchToFujiTestnet]);
+
+    // Added missing dependency
+    useEffect(() => {
+        clearConnectionLock();
+    }, [clearConnectionLock]);
 
     return {
         provider,

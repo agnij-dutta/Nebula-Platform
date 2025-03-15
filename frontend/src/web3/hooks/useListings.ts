@@ -1,6 +1,5 @@
 import { useState, useCallback, useEffect } from 'react';
 import { useWeb3 } from './useWeb3';
-import { ethers } from 'ethers';
 
 export interface Listing {
     listingId: number;
@@ -129,6 +128,11 @@ export function useListings(pageSize: number = 10) {
             refresh();
         }
     }, [isNetworkSwitching, contractInterface]);
+
+    // Added missing dependency
+    useEffect(() => {
+        refresh();
+    }, [refresh]);
 
     return {
         listings,

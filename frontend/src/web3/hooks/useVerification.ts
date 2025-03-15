@@ -16,6 +16,48 @@ export function useVerification({ projectId, milestoneId }: UseVerificationOptio
     const { contractInterface } = useWeb3();
     const [status, setStatus] = useState<VerificationStatus>({ status: 'pending' });
 
+    const startPolling = useCallback(async (requestId: string) => {
+        if (!contractInterface) return;
+
+        const pollInterval = setInterval(async () => {
+            try {
+                const oracle = await contractInterface.getMilestoneOracle();
+                const request = await oracle.verificationRequests(requestId);
+
+                if (!request.isProcessing) {
+                    clearInterval(pollInterval);
+                    setStatus({
+                        status: request.isVerified ? 'verified' : 'failed',
+                        requestId
+                    });
+                }
+            } catch (error) {
+                clearInterval(pollInterval);
+                setStatus({
+                    status: 'failed',
+                    requestId,
+                    error: 'Failed to check verification status'
+                });
+            }
+        }, 5000); // Poll every 5 seconds
+
+        // Clean up interval after 10 minutes
+        setTimeout(() => {
+            clearInterval(pollInterval);
+            setStatus(current => {
+                if (current.status === 'processing') {
+                    return {
+                        status: 'failed',
+                        requestId,
+                        error: 'Verification timed out'
+                    };
+                }
+                return current;
+            });
+        }, 600000);
+
+    }, [contractInterface]);
+
     const requestVerification = useCallback(async (proofCID: string, verificationCID: string) => {
         if (!contractInterface) return;
 
@@ -59,49 +101,7 @@ export function useVerification({ projectId, milestoneId }: UseVerificationOptio
                 error: error.message || 'Failed to request verification' 
             });
         }
-    }, [contractInterface, projectId, milestoneId]);
-
-    const startPolling = useCallback(async (requestId: string) => {
-        if (!contractInterface) return;
-
-        const pollInterval = setInterval(async () => {
-            try {
-                const oracle = await contractInterface.getMilestoneOracle();
-                const request = await oracle.verificationRequests(requestId);
-
-                if (!request.isProcessing) {
-                    clearInterval(pollInterval);
-                    setStatus({
-                        status: request.isVerified ? 'verified' : 'failed',
-                        requestId
-                    });
-                }
-            } catch (error) {
-                clearInterval(pollInterval);
-                setStatus({
-                    status: 'failed',
-                    requestId,
-                    error: 'Failed to check verification status'
-                });
-            }
-        }, 5000); // Poll every 5 seconds
-
-        // Clean up interval after 10 minutes
-        setTimeout(() => {
-            clearInterval(pollInterval);
-            setStatus(current => {
-                if (current.status === 'processing') {
-                    return {
-                        status: 'failed',
-                        requestId,
-                        error: 'Verification timed out'
-                    };
-                }
-                return current;
-            });
-        }, 600000);
-
-    }, [contractInterface]);
+    }, [contractInterface, projectId, milestoneId, startPolling]);
 
     const resetStatus = useCallback(() => {
         setStatus({ status: 'pending' });

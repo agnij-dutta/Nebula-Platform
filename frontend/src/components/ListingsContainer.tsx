@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React from 'react';
 import { useListings } from '../web3/hooks/useListings';
 import { ethers } from 'ethers';
 import { useWeb3 } from '../web3/hooks/useWeb3';

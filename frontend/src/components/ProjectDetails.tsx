@@ -25,15 +25,8 @@ const ProjectDetails: React.FC = () => {
   const [error, setError] = useState('');
   const [txPending, setTxPending] = useState(false);
 
-  useEffect(() => {
-    if (id) {
-      loadProject();
-    }
-  }, [id, contractInterface]);
-
   const loadProject = async () => {
     if (!contractInterface || !id) return;
-    
     try {
       const projectDetails = await contractInterface.getProjectDetails(id);
       setProject(projectDetails);
@@ -44,6 +37,17 @@ const ProjectDetails: React.FC = () => {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    if (id) {
+      loadProject();
+    }
+  }, [id, contractInterface]);
+
+  // Added missing dependency
+  useEffect(() => {
+    loadProject();
+  }, [loadProject]);
 
   const handleFund = async (e: React.FormEvent) => {
     e.preventDefault();

@@ -1,161 +1,211 @@
 .research-hub {
-  padding: 2rem;
-  max-width: 1200px;
-  margin: 0 auto;
+    max-width: 1200px;
+    margin: 2rem auto;
+    padding: 0 1rem;
 }
 
 .research-hub-header {
-  margin-bottom: 2rem;
+    margin-bottom: 2rem;
+    text-align: center;
 }
 
 .research-hub-header h1 {
-  margin-bottom: 1rem;
-  background: linear-gradient(45deg, #8B5CF6, #E0E7FF);
-  background-clip: text;
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  font-size: 2.5rem;
+    margin-bottom: 1.5rem;
+    color: #2d3748;
+    font-size: 2.25rem;
 }
 
 .filters {
-  display: flex;
-  gap: 1rem;
-  margin-bottom: 2rem;
+    display: flex;
+    gap: 1rem;
+    justify-content: center;
+    margin-bottom: 2rem;
 }
 
 .filters select {
-  padding: 0.75rem;
-  border: 1px solid rgba(var(--foreground-rgb), 0.1);
-  border-radius: 8px;
-  background: rgba(var(--foreground-rgb), 0.05);
-  color: rgb(var(--foreground-rgb));
-  min-width: 150px;
-  cursor: pointer;
-  transition: all 0.2s ease;
+    padding: 0.75rem 1rem;
+    border: 2px solid #e2e8f0;
+    border-radius: 8px;
+    background-color: white;
+    color: #4a5568;
+    font-size: 1rem;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.filters select:hover {
+    border-color: #4299e1;
 }
 
 .filters select:focus {
-  border-color: #8B5CF6;
-  box-shadow: 0 0 0 2px rgba(139, 92, 246, 0.2);
-  outline: none;
+    outline: none;
+    border-color: #4299e1;
+    box-shadow: 0 0 0 2px rgba(66, 153, 225, 0.2);
 }
 
 .projects-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-  gap: 2rem;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 2rem;
 }
 
 .project-card {
-  background: var(--glass-bg);
-  backdrop-filter: blur(10px);
-  border: 1px solid var(--glass-border);
-  border-radius: 16px;
-  padding: 1.5rem;
-  transition: all 0.3s ease;
+    background: white;
+    border-radius: 12px;
+    padding: 1.5rem;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    transition: transform 0.2s, box-shadow 0.2s;
 }
 
 .project-card:hover {
-  transform: translateY(-4px);
-  box-shadow: 0 4px 20px var(--glow-shadow);
+    transform: translateY(-4px);
+    box-shadow: 0 8px 12px rgba(0, 0, 0, 0.1);
 }
 
 .project-card h3 {
-  margin: 0 0 1rem;
-  color: rgb(var(--foreground-rgb));
-  font-size: 1.5rem;
+    margin: 0 0 1rem;
+    color: #2d3748;
+    font-size: 1.25rem;
 }
 
 .project-card .description {
-  color: rgba(var(--foreground-rgb), 0.8);
-  margin-bottom: 1.5rem;
-  display: -webkit-box;
-  line-clamp: 3;
-  -webkit-line-clamp: 3;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  line-height: 1.5;
+    color: #4a5568;
+    margin-bottom: 1.5rem;
+    line-height: 1.5;
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
 }
 
 .project-stats {
-  margin-bottom: 1rem;
+    margin-bottom: 1.5rem;
 }
 
 .funding-progress {
-  margin-bottom: 1rem;
+    margin-bottom: 1rem;
 }
 
 .progress-bar {
-  height: 8px;
-  background: rgba(var(--foreground-rgb), 0.1);
-  border-radius: 8px;
-  overflow: hidden;
-  margin-bottom: 0.5rem;
+    height: 8px;
+    background: #edf2f7;
+    border-radius: 4px;
+    overflow: hidden;
+    margin-bottom: 0.5rem;
 }
 
-.progress-bar .progress {
-  height: 100%;
-  background: linear-gradient(45deg, #8B5CF6, #E0E7FF);
-  transition: width 0.3s ease;
+.progress {
+    height: 100%;
+    background: linear-gradient(90deg, #4299e1, #667eea);
+    border-radius: 4px;
+    transition: width 0.3s ease;
+}
+
+.funding-progress span {
+    color: #4a5568;
+    font-size: 0.875rem;
 }
 
 .milestones {
-  font-size: 0.9rem;
-  color: rgba(var(--foreground-rgb), 0.7);
-  margin-bottom: 0.5rem;
+    display: flex;
+    align-items: center;
+    margin-bottom: 1rem;
+}
+
+.milestones span {
+    color: #4a5568;
+    font-size: 0.875rem;
 }
 
 .category-tag {
-  display: inline-block;
-  padding: 0.25rem 0.75rem;
-  background: rgba(139, 92, 246, 0.1);
-  color: #8B5CF6;
-  border-radius: 16px;
-  font-size: 0.8rem;
-  margin-bottom: 1rem;
-  border: 1px solid rgba(139, 92, 246, 0.2);
+    display: inline-block;
+    padding: 0.25rem 0.75rem;
+    background: #ebf8ff;
+    color: #2b6cb0;
+    border-radius: 9999px;
+    font-size: 0.75rem;
+    font-weight: 500;
 }
 
 .view-details {
-  width: 100%;
-  padding: 0.75rem;
-  background: linear-gradient(45deg, #8B5CF6, #E0E7FF);
-  color: white;
-  border: none;
-  border-radius: 8px;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  font-weight: 500;
+    width: 100%;
+    padding: 0.75rem;
+    background: #4299e1;
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-size: 1rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background-color 0.2s;
 }
 
 .view-details:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px var(--glow-shadow);
+    background: #3182ce;
 }
 
 .loading {
-  text-align: center;
-  padding: 2rem;
-  color: rgba(var(--foreground-rgb), 0.6);
+    text-align: center;
+    padding: 2rem;
+    color: #4a5568;
+    font-size: 1.125rem;
 }
 
-@keyframes shimmer {
-  0% {
-    background-position: -200% 0;
-  }
-  100% {
-    background-position: 200% 0;
-  }
+@media (max-width: 768px) {
+    .filters {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .research-hub-header h1 {
+        font-size: 1.875rem;
+    }
+
+    .projects-grid {
+        grid-template-columns: 1fr;
+    }
 }
 
-.loading .project-card {
-  background: linear-gradient(
-    90deg,
-    var(--glass-bg) 25%,
-    rgba(139, 92, 246, 0.1) 50%,
-    var(--glass-bg) 75%
-  );
-  background-size: 200% 100%;
-  animation: shimmer 2s infinite;
+/* Animation for cards */
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.project-card {
+    animation: fadeInUp 0.3s ease-out forwards;
+}
+
+/* Loading animation */
+@keyframes pulse {
+    0% { opacity: 1; }
+    50% { opacity: 0.5; }
+    100% { opacity: 1; }
+}
+
+.loading {
+    animation: pulse 1.5s infinite;
+}
+
+/* Hover effects */
+.project-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, #4299e1, #667eea);
+    transform: scaleX(0);
+    transition: transform 0.3s ease;
+}
+
+.project-card:hover::before {
+    transform: scaleX(1);
 }

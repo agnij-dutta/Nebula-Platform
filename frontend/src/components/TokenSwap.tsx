@@ -1,11 +1,12 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { ethers } from 'ethers';
 import { useWeb3 } from '../web3/hooks/useWeb3';
+import { WEB3_CONFIG } from '../web3/config';
 import WalletPrompt from './WalletPrompt';
 import './TokenSwap.css';
 
 const TokenSwap = () => {
-    const { contractInterface, account, needsWallet, connectWallet } = useWeb3();
+    const { contractInterface, account, needsWallet, connectWallet, chainId, isNetworkSwitching } = useWeb3();
     const [avaxAmount, setAvaxAmount] = useState('');
     const [expectedNebl, setExpectedNebl] = useState('0');
     const [loading, setLoading] = useState(false);
@@ -14,69 +15,57 @@ const TokenSwap = () => {
     const [success, setSuccess] = useState(false);
 
     const updateBalance = useCallback(async () => {
-        if (!contractInterface || !account) return;
-        try {
-            const neblToken = await contractInterface.getNEBLToken();
-            const balance = await neblToken.balanceOf(account);
-            setNeblBalance(ethers.utils.formatEther(balance));
-
-            // Only attempt to add to MetaMask if we haven't already (using localStorage to track)
-            if (window.ethereum && balance.gt(0) && !localStorage.getItem('nebl-added-to-metamask')) {
-                try {
-                    const address = await neblToken.address;
-                    const symbol = 'NEBL';
-                    const decimals = 18;
-                    
-                    const success = await window.ethereum.request({
-                        method: 'wallet_watchAsset',
-                        params: [{
-                            type: 'ERC20',
-                            options: {
-                                address: address,
-                                symbol: symbol,
-                                decimals: decimals,
-                                image: 'https://raw.githubusercontent.com/your-repo/assets/main/nebl-logo.png'
-                            }
-                        }]
-                    });
-
-                    if (success) {
-                        localStorage.setItem('nebl-added-to-metamask', 'true');
-                    }
-                } catch (error) {
-                    console.error('Failed to add token to MetaMask:', error);
-                }
-            }
-        } catch (err) {
-            console.error('Failed to get NEBL balance:', err);
+        if (!contractInterface || !account || chainId !== WEB3_CONFIG.NETWORKS.TESTNET.chainId) {
+            setNeblBalance('0');
+            return;
         }
-    }, [contractInterface, account]);
+
+        try {
+            const balance = await contractInterface.getNeblBalance(account);
+            setNeblBalance(ethers.utils.formatEther(balance));
+            setError(''); // Clear any previous errors
+        } catch (err: any) {
+            console.error('Failed to get NEBL balance:', err);
+            setNeblBalance('0');
+            // Don't show initialization errors to user, they'll see network overlay if needed
+            if (!err.message.includes('network') && !err.message.includes('contract')) {
+                setError(err.message);
+            }
+        }
+    }, [contractInterface, account, chainId]);
 
     useEffect(() => {
-        updateBalance();
-        // Poll for balance updates every 5 seconds
-        const interval = setInterval(updateBalance, 5000);
-        return () => clearInterval(interval);
-    }, [updateBalance]);
+        if (chainId === WEB3_CONFIG.NETWORKS.TESTNET.chainId) {
+            updateBalance();
+            // Poll for balance updates
+            const interval = setInterval(updateBalance, 10000);
+            return () => clearInterval(interval);
+        }
+    }, [updateBalance, chainId]);
+
+    const calculateExpectedAmount = useCallback(async (amount: string) => {
+        if (!contractInterface || !amount || isNaN(Number(amount))) {
+            setExpectedNebl('0');
+            return;
+        }
+
+        try {
+            const expectedAmount = await contractInterface.calculateExpectedNEBL(amount);
+            setExpectedNebl(ethers.utils.formatEther(expectedAmount));
+            setError('');
+        } catch (err: any) {
+            console.error('Failed to calculate NEBL amount:', err);
+            setExpectedNebl('0');
+            // Only show relevant errors to user
+            if (!err.message.includes('network') && !err.message.includes('contract')) {
+                setError('Failed to calculate expected NEBL amount');
+            }
+        }
+    }, [contractInterface]);
 
     useEffect(() => {
-        const updateExpectedAmount = async () => {
-            if (!contractInterface || !avaxAmount) {
-                setExpectedNebl('0');
-                return;
-            }
-            try {
-                const neblSwap = await contractInterface.getNeblSwap();
-                const neblAmount = await neblSwap.calculateNEBLAmount(ethers.utils.parseEther(avaxAmount));
-                setExpectedNebl(ethers.utils.formatEther(neblAmount));
-            } catch (err) {
-                console.error('Failed to calculate NEBL amount:', err);
-                setExpectedNebl('0');
-            }
-        };
-
-        updateExpectedAmount();
-    }, [avaxAmount, contractInterface]);
+        calculateExpectedAmount(avaxAmount);
+    }, [avaxAmount, calculateExpectedAmount]);
 
     const handleSwap = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -87,36 +76,45 @@ const TokenSwap = () => {
         setSuccess(false);
 
         try {
-            const neblSwap = await contractInterface.getNeblSwap();
-            const tx = await neblSwap.swapAVAXForNEBL({
-                value: ethers.utils.parseEther(avaxAmount)
-            });
+            const receipt = await contractInterface.swapAVAXForNEBL(avaxAmount);
             
-            // Show pending status
-            setLoading(true);
-            
-            const receipt = await tx.wait();
-            
-            // Listen for the SwapAVAXForNEBL event
-            const event = receipt.events?.find((e: { event: string }) => e.event === 'SwapAVAXForNEBL');
-            if (event) {
-                const neblAmount = ethers.utils.formatEther(event.args.neblAmount);
-                console.log(`Successfully swapped ${avaxAmount} AVAX for ${neblAmount} NEBL`);
+            if (receipt.status === 1) {
+                setAvaxAmount('');
+                setExpectedNebl('0');
+                setSuccess(true);
+                
+                // Update balance with retry logic
+                let retries = 3;
+                const retryBalance = async () => {
+                    try {
+                        await updateBalance();
+                    } catch (err) {
+                        if (retries > 0) {
+                            retries--;
+                            setTimeout(retryBalance, 2000);
+                        }
+                    }
+                };
+                await retryBalance();
             }
-
-            setAvaxAmount('');
-            setExpectedNebl('0');
-            setSuccess(true);
-
-            // Update balance multiple times to ensure it's captured after network delay
-            await updateBalance();
-            setTimeout(updateBalance, 2000);
-            setTimeout(updateBalance, 5000);
         } catch (err: any) {
             console.error('Swap failed:', err);
-            setError(err.message || 'Failed to swap tokens');
+            if (err.code === 4001) {
+                setError('Transaction rejected by user');
+            } else if (err.message.includes('insufficient liquidity')) {
+                setError('Insufficient liquidity in swap contract');
+            } else if (!err.message.includes('network')) {
+                setError(err.message || 'Failed to swap tokens');
+            }
         } finally {
             setLoading(false);
+        }
+    };
+
+    const handleAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const value = e.target.value;
+        if (value === '' || (/^\d*\.?\d*$/.test(value) && !isNaN(Number(value)))) {
+            setAvaxAmount(value);
         }
     };
 
@@ -129,12 +127,15 @@ const TokenSwap = () => {
         );
     }
 
+    const isWrongNetwork = chainId !== WEB3_CONFIG.NETWORKS.TESTNET.chainId;
+
     return (
-        <div className="token-swap">
+        <div className={`token-swap ${loading ? 'loading' : ''}`}>
             <h1>Swap AVAX for NEBL</h1>
             
-            <div className="balance-info">
+            <div className={`balance-info ${isNetworkSwitching ? 'updating' : ''}`}>
                 <p>Your NEBL Balance: {neblBalance} NEBL</p>
+                {isNetworkSwitching && <div className="loading-spinner"></div>}
             </div>
 
             {error && <div className="error">{error}</div>}
@@ -144,13 +145,11 @@ const TokenSwap = () => {
                 <div className="input-group">
                     <label>AVAX Amount</label>
                     <input
-                        type="number"
-                        step="0.000001"
-                        min="0"
+                        type="text"
                         value={avaxAmount}
-                        onChange={(e) => setAvaxAmount(e.target.value)}
+                        onChange={handleAmountChange}
                         placeholder="Enter AVAX amount"
-                        required
+                        disabled={isWrongNetwork || loading || isNetworkSwitching}
                     />
                 </div>
                 
@@ -158,8 +157,14 @@ const TokenSwap = () => {
                     Expected NEBL: {expectedNebl}
                 </div>
                 
-                <button type="submit" disabled={loading || !avaxAmount}>
-                    {loading ? 'Processing...' : 'Swap'}
+                <button 
+                    type="submit" 
+                    disabled={loading || !avaxAmount || isWrongNetwork || isNetworkSwitching}
+                >
+                    {loading ? 'Processing...' : 
+                     isWrongNetwork ? 'Wrong Network' :
+                     isNetworkSwitching ? 'Switching Network...' : 
+                     'Swap'}
                 </button>
             </form>
         </div>
