@@ -10,6 +10,9 @@ let connectionLockTimeout: NodeJS.Timeout | null = null;
 // Add local storage key for connection state
 const WALLET_CONNECTED_KEY = 'nebula_wallet_connected';
 
+// Configure RPC retry settings
+const RPC_CONFIG = WEB3_CONFIG.ETHERS_CONFIG.rpcConfig;
+
 export function useWeb3() {
     const [provider, setProvider] = useState<ethers.providers.Web3Provider | null>(null);
     const [contractInterface, setContractInterface] = useState<ContractInterface | null>(null);
@@ -115,8 +118,47 @@ export function useWeb3() {
             });
             
             if (accounts.length > 0) {
-                const web3Provider = new ethers.providers.Web3Provider(window.ethereum, 'any');
-                const network = await web3Provider.getNetwork();
+                // Initialize provider with correct network configuration
+                const web3Provider = new ethers.providers.Web3Provider(
+                    window.ethereum,
+                    {
+                        name: WEB3_CONFIG.NETWORKS.TESTNET.name,
+                        chainId: WEB3_CONFIG.NETWORKS.TESTNET.chainId
+                    }
+                );
+
+                // Get network with retries
+                let network: ethers.providers.Network | undefined;
+                let retries = RPC_CONFIG.maxRetries;
+                
+                while (retries >= 0) {
+                    try {
+                        network = await Promise.race([
+                            web3Provider.getNetwork(),
+                            new Promise<never>((_, reject) => 
+                                setTimeout(() => reject(new Error('Network fetch timeout')), 
+                                WEB3_CONFIG.ETHERS_CONFIG.timeout
+                            ))
+                        ]);
+                        break;
+                    } catch (err) {
+                        if (retries === 0) throw err;
+                        retries--;
+                        // Use a closure to capture the current retry count
+                        await (async (currentRetry: number) => {
+                            await new Promise(resolve => 
+                                setTimeout(resolve, RPC_CONFIG.customBackoff(
+                                    RPC_CONFIG.maxRetries - currentRetry
+                                ))
+                            );
+                        })(retries);
+                    }
+                }
+
+                if (!network) {
+                    throw new Error('Failed to get network information');
+                }
+
                 setProvider(web3Provider);
                 setContractInterface(new ContractInterface(web3Provider));
                 setAccount(accounts[0]);
@@ -124,6 +166,7 @@ export function useWeb3() {
                 setIsInitialized(true);
                 setNeedsWallet(false);
 
+                // Switch network if needed
                 if (network.chainId !== WEB3_CONFIG.NETWORKS.TESTNET.chainId) {
                     try {
                         await switchToFujiTestnet();
@@ -134,11 +177,32 @@ export function useWeb3() {
             } else {
                 setNeedsWallet(true);
             }
-        } catch (err) {
+        } catch (err: any) {
             console.error('Failed to initialize web3:', err);
             resetConnectionState();
+            if (err.code === -32603) {
+                // Handle RPC error by retrying with exponential backoff
+                let retries = RPC_CONFIG.maxRetries;
+                while (retries > 0) {
+                    try {
+                        // Use a closure to capture the current retry count
+                        await (async (currentRetry: number) => {
+                            await new Promise(resolve => 
+                                setTimeout(resolve, RPC_CONFIG.customBackoff(
+                                    RPC_CONFIG.maxRetries - currentRetry
+                                ))
+                            );
+                            await initializeWeb3();
+                        })(retries);
+                        break;
+                    } catch (retryErr) {
+                        retries--;
+                        if (retries === 0) throw err;
+                    }
+                }
+            }
         }
-    }, [switchToFujiTestnet, resetConnectionState]);
+    }, [resetConnectionState, switchToFujiTestnet]);
 
     const clearConnectionLock = useCallback(() => {
         if (connectionLockTimeout) {

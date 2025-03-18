@@ -27,24 +27,26 @@ interface IPDetails {
 }
 
 export interface ProjectDetails {
-    projectId: string;
     title: string;
     description: string;
-    researcher: string;
-    totalFunding: string;
-    currentFunding: string;
-    isActive: boolean;
     category: string;
+    researcher: string;
+    currentFunding: string;
+    totalFunding: string;
+    isActive: boolean;
     createdAt: number;
-    milestones: MilestoneDetails[];
+    deadline: number;
+    metadataURI: string;
+    milestones: Milestone[];
+    projectId?: string;
 }
 
-interface MilestoneDetails {
+export interface Milestone {
     description: string;
     targetAmount: string;
     currentAmount: string;
     isCompleted: boolean;
-    fundsReleased: boolean;
+    verificationCID: string;
 }
 
 interface DisputeDetails {
@@ -97,8 +99,15 @@ export class ContractInterface {
     private signer: ethers.Signer;
     
     constructor(provider: ethers.providers.Web3Provider) {
-        this.provider = provider;
-        this.signer = provider.getSigner();
+        const network = ethers.providers.getNetwork(WEB3_CONFIG.NETWORKS.TESTNET.chainId);
+        
+        // Create a Web3Provider with the network configuration
+        this.provider = new ethers.providers.Web3Provider(
+            provider.provider as ethers.providers.ExternalProvider,
+            network
+        );
+        
+        this.signer = this.provider.getSigner();
     }
 
     private getContractAddress(contractName: keyof typeof WEB3_CONFIG.CONTRACTS): string {
@@ -468,13 +477,13 @@ export class ContractInterface {
         
         const milestones = await Promise.all(
             milestoneIds.map(async (id: number) => {
-                const m = await researchProject.getMilestone(projectId, id);
+                const milestone = await researchProject.getMilestone(projectId, id);
                 return {
-                    description: m.description,
-                    targetAmount: ethers.utils.formatEther(m.targetAmount),
-                    currentAmount: ethers.utils.formatEther(m.currentAmount),
-                    isCompleted: m.isCompleted,
-                    fundsReleased: m.fundsReleased
+                    description: milestone.description,
+                    targetAmount: ethers.utils.formatEther(milestone.targetAmount),
+                    currentAmount: ethers.utils.formatEther(milestone.currentAmount),
+                    isCompleted: milestone.isCompleted,
+                    verificationCID: milestone.verificationCID
                 };
             })
         );
@@ -489,6 +498,8 @@ export class ContractInterface {
             isActive: project.isActive,
             category: project.category,
             createdAt: project.createdAt.toNumber(),
+            deadline: project.deadline.toNumber(),
+            metadataURI: project.metadataURI,
             milestones
         };
     }

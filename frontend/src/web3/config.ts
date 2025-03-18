@@ -63,6 +63,13 @@ export const WEB3_CONFIG = {
     GAS_LIMIT_MULTIPLIER: 1.2, // Add 20% to estimated gas
     ETHERS_CONFIG: {
         blockConfirmations: 2,
-        timeout: 30000 // 30 seconds transaction timeout
+        timeout: 30000, // 30 seconds transaction timeout
+        rpcConfig: {
+            allowRetry: true,
+            maxRetries: 3,
+            retryInterval: 1000,
+            batchSize: 10000, // Maximum blocks to query at once
+            customBackoff: (attempt: number) => Math.min(1000 * Math.pow(2, attempt), 10000)
+        }
     }
 }

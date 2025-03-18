@@ -3,6 +3,7 @@ import { ethers } from 'ethers';
 import { useWeb3 } from '../web3/hooks/useWeb3';
 import WalletPrompt from './WalletPrompt';
 import './Governance.css';
+import { WEB3_CONFIG } from '../web3/config';
 
 enum ProposalState {
   Pending,
@@ -32,6 +33,7 @@ const Governance: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [neblBalance, setNeblBalance] = useState('0');
   const [isCreatingProposal, setIsCreatingProposal] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [proposalForm, setProposalForm] = useState({
     title: '',
     description: '',
@@ -40,41 +42,109 @@ const Governance: React.FC = () => {
     parameters: ''
   });
 
+  const loadProposalsInBatches = useCallback(async (governance: any, fromBlock: number, toBlock: number) => {
+    const batchSize = WEB3_CONFIG.ETHERS_CONFIG.rpcConfig.batchSize;
+    const events = [];
+    
+    for (let start = fromBlock; start <= toBlock; start += batchSize) {
+        const end = Math.min(start + batchSize - 1, toBlock);
+        let retries = WEB3_CONFIG.ETHERS_CONFIG.rpcConfig.maxRetries;
+        
+        while (retries >= 0) {
+            try {
+                const batchEvents = await governance.queryFilter(
+                    governance.filters.ProposalCreated(),
+                    start,
+                    end
+                );
+                events.push(...batchEvents);
+                break;
+            } catch (err) {
+                if (retries === 0) throw err;
+                retries--;
+                await new Promise(resolve => 
+                    setTimeout(resolve, 
+                        WEB3_CONFIG.ETHERS_CONFIG.rpcConfig.customBackoff(
+                            WEB3_CONFIG.ETHERS_CONFIG.rpcConfig.maxRetries - retries
+                        )
+                    )
+                );
+            }
+        }
+    }
+    return events;
+  }, []);
+
   const loadProposals = useCallback(async () => {
     if (!contractInterface) return;
     setLoading(true);
+    setError(null);
     
     try {
       const governance = await contractInterface.getGovernance();
-      // Get latest block number to have a reference for proposal counting
-      const latestBlock = await governance.provider.getBlockNumber();
-      const proposalEvents = await governance.queryFilter(governance.filters.ProposalCreated(), 0, latestBlock);
+      const provider = governance.provider;
+
+      // Get latest block with retries
+      let latestBlock = 0;
+      let retries = WEB3_CONFIG.ETHERS_CONFIG.rpcConfig.maxRetries;
       
-      const proposalPromises = proposalEvents.map(async (event) => {
-        const proposalId = event.args?.proposalId.toString();
-        const state = await governance.state(proposalId);
-        const votes = await governance.proposalVotes(proposalId);
-        
-        return {
-          id: proposalId,
-          proposer: event.args?.proposer,
-          description: event.args?.description,
-          startBlock: event.args?.startBlock.toNumber(),
-          endBlock: event.args?.endBlock.toNumber(),
-          state: state,
-          forVotes: votes.forVotes.toString(),
-          againstVotes: votes.againstVotes.toString()
-        };
+      while (retries >= 0) {
+          try {
+              latestBlock = await provider.getBlockNumber();
+              break;
+          } catch (err) {
+              if (retries === 0) throw err;
+              retries--;
+              await new Promise(resolve => 
+                  setTimeout(resolve, 
+                      WEB3_CONFIG.ETHERS_CONFIG.rpcConfig.customBackoff(
+                          WEB3_CONFIG.ETHERS_CONFIG.rpcConfig.maxRetries - retries
+                      )
+                  )
+              );
+          }
+      }
+
+      // Get events in batches with exponential backoff retry
+      const fromBlock = Math.max(0, latestBlock - 100_000); // Last ~2 weeks of blocks
+      const events = await loadProposalsInBatches(governance, fromBlock, latestBlock);
+
+      const proposalPromises = events.map(async (event) => {
+          try {
+              const proposalId = event.args?.proposalId.toString();
+              const [state, votes] = await Promise.all([
+                  governance.state(proposalId).catch(() => 0), // Default to Pending state on error
+                  governance.proposalVotes(proposalId).catch(() => ({ forVotes: 0, againstVotes: 0 }))
+              ]);
+
+              return {
+                  id: proposalId,
+                  proposer: event.args?.proposer,
+                  description: event.args?.description,
+                  startBlock: event.args?.startBlock.toNumber(),
+                  endBlock: event.args?.endBlock.toNumber(),
+                  state,
+                  forVotes: ethers.utils.formatEther(votes.forVotes || 0),
+                  againstVotes: ethers.utils.formatEther(votes.againstVotes || 0)
+              };
+          } catch (err) {
+              console.error('Failed to load proposal details:', err);
+              return null;
+          }
       });
 
-      const proposals = await Promise.all(proposalPromises);
-      setProposals(proposals);
-    } catch (err) {
+      const loadedProposals = (await Promise.all(proposalPromises))
+          .filter((p): p is Proposal => p !== null)
+          .sort((a, b) => b.startBlock - a.startBlock);
+
+      setProposals(loadedProposals);
+    } catch (err: any) {
       console.error('Failed to load proposals:', err);
+      setError(err.message || 'Failed to load proposals');
     } finally {
       setLoading(false);
     }
-  }, [contractInterface]);
+  }, [contractInterface, loadProposalsInBatches]);
 
   const loadNeblBalance = useCallback(async () => {
     if (!contractInterface || !account) return;
@@ -170,13 +240,17 @@ const Governance: React.FC = () => {
   }
 
   return (
-    <div className="governance-container">
-      <h1>Governance</h1>
-      <div className="nebl-balance">
-        Your Voting Power: {neblBalance} NEBL
+    <div className="governance">
+      <div className="governance-header">
+        <h1>Governance</h1>
+        <div className="nebl-balance">
+          Your Voting Power: {neblBalance} NEBL
+        </div>
       </div>
 
-      {loading ? (
+      {error ? (
+        <div className="error-message">{error}</div>
+      ) : loading ? (
         <div className="loading">Loading proposals...</div>
       ) : (
         <div className="proposals-section">

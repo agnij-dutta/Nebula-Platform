@@ -1,0 +1,255 @@
+.researcher-dashboard {
+    max-width: 1200px;
+    margin: 2rem auto;
+    padding: 0 2rem;
+}
+
+.dashboard-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 3rem;
+}
+
+.dashboard-header h1 {
+    font-size: 2.5rem;
+    background: linear-gradient(45deg, #8B5CF6, #E0E7FF);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+
+.create-project-button {
+    padding: 0.75rem 1.5rem;
+    background: linear-gradient(45deg, #8B5CF6, #E0E7FF);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-size: 1rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    text-decoration: none;
+}
+
+.create-project-button:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px var(--glow-shadow);
+}
+
+.dashboard-stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 2rem;
+    margin-bottom: 3rem;
+}
+
+.stat-card {
+    background: var(--glass-bg);
+    backdrop-filter: blur(10px);
+    border: 1px solid var(--glass-border);
+    border-radius: 16px;
+    padding: 1.5rem;
+    transition: all 0.3s ease;
+}
+
+.stat-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 4px 20px var(--glow-shadow);
+}
+
+.stat-card h3 {
+    color: rgba(var(--foreground-rgb), 0.8);
+    font-size: 1.1rem;
+    margin-bottom: 0.5rem;
+}
+
+.stat-card p {
+    color: rgb(var(--foreground-rgb));
+    font-size: 2rem;
+    font-weight: 600;
+    background: linear-gradient(45deg, #8B5CF6, #E0E7FF);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+
+.projects-section {
+    margin-top: 3rem;
+}
+
+.projects-section h2 {
+    font-size: 1.8rem;
+    color: rgb(var(--foreground-rgb));
+    margin-bottom: 2rem;
+}
+
+.projects-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: 2rem;
+}
+
+.project-card {
+    background: var(--glass-bg);
+    backdrop-filter: blur(10px);
+    border: 1px solid var(--glass-border);
+    border-radius: 16px;
+    padding: 1.5rem;
+    transition: all 0.3s ease;
+}
+
+.project-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 4px 20px var(--glow-shadow);
+}
+
+.project-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 1.5rem;
+}
+
+.project-header h3 {
+    margin: 0;
+    font-size: 1.25rem;
+    color: rgb(var(--foreground-rgb));
+}
+
+.status {
+    padding: 0.25rem 0.75rem;
+    border-radius: 16px;
+    font-size: 0.875rem;
+    font-weight: 500;
+}
+
+.status.active {
+    background: rgba(46, 125, 50, 0.1);
+    color: #2e7d32;
+}
+
+.status.completed {
+    background: rgba(59, 130, 246, 0.1);
+    color: #3b82f6;
+}
+
+.project-stats {
+    margin-bottom: 1.5rem;
+}
+
+.funding-progress {
+    margin-bottom: 1rem;
+}
+
+.progress-bar {
+    height: 8px;
+    background: rgba(var(--foreground-rgb), 0.1);
+    border-radius: 4px;
+    overflow: hidden;
+    margin-bottom: 0.5rem;
+}
+
+.progress-bar .progress {
+    height: 100%;
+    background: linear-gradient(45deg, #8B5CF6, #E0E7FF);
+    transition: width 0.3s ease;
+}
+
+.funding-info {
+    display: flex;
+    justify-content: space-between;
+    color: rgba(var(--foreground-rgb), 0.8);
+    font-size: 0.9rem;
+}
+
+.milestone-progress {
+    color: rgba(var(--foreground-rgb), 0.8);
+    font-size: 0.9rem;
+}
+
+.view-details {
+    display: block;
+    width: 100%;
+    padding: 0.75rem;
+    background: linear-gradient(45deg, #8B5CF6, #E0E7FF);
+    color: white;
+    text-align: center;
+    border: none;
+    border-radius: 8px;
+    font-size: 1rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    text-decoration: none;
+}
+
+.view-details:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px var(--glow-shadow);
+}
+
+.no-projects {
+    text-align: center;
+    padding: 3rem;
+    background: var(--glass-bg);
+    backdrop-filter: blur(10px);
+    border: 1px solid var(--glass-border);
+    border-radius: 16px;
+    color: rgba(var(--foreground-rgb), 0.6);
+}
+
+.create-first-project {
+    display: inline-block;
+    margin-top: 1.5rem;
+    padding: 0.75rem 1.5rem;
+    background: linear-gradient(45deg, #8B5CF6, #E0E7FF);
+    color: white;
+    border-radius: 8px;
+    text-decoration: none;
+    font-weight: 500;
+    transition: all 0.3s ease;
+}
+
+.create-first-project:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px var(--glow-shadow);
+}
+
+.loading {
+    text-align: center;
+    padding: 3rem;
+    color: rgba(var(--foreground-rgb), 0.6);
+}
+
+.error {
+    text-align: center;
+    padding: 2rem;
+    background: rgba(239, 68, 68, 0.1);
+    border: 1px solid rgba(239, 68, 68, 0.2);
+    border-radius: 8px;
+    color: #ef4444;
+}
+
+@media (max-width: 768px) {
+    .researcher-dashboard {
+        padding: 0 1rem;
+    }
+
+    .dashboard-header {
+        flex-direction: column;
+        gap: 1rem;
+        text-align: center;
+    }
+
+    .dashboard-header h1 {
+        font-size: 2rem;
+    }
+
+    .create-project-button {
+        width: 100%;
+        text-align: center;
+    }
+
+    .projects-grid {
+        grid-template-columns: 1fr;
+    }
+}

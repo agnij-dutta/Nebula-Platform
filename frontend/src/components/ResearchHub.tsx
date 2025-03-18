@@ -1,4 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { Link } from 'react-router-dom';
+import { ethers } from 'ethers';
 import { useWeb3 } from '../web3/hooks/useWeb3';
 import { ProjectDetails } from '../web3/utils/contracts';
 import WalletPrompt from './WalletPrompt';
@@ -17,7 +19,7 @@ enum FundingStatus {
 }
 
 const ResearchHub: React.FC = () => {
-  const { contractInterface, needsWallet, connectWallet, isConnecting } = useWeb3();
+  const { contractInterface, account, needsWallet, connectWallet, isConnecting } = useWeb3();
   const [projects, setProjects] = useState<ProjectDetails[]>([]);
   const [sortBy, setSortBy] = useState<SortOption>(SortOption.Trending);
   const [filterStatus, setFilterStatus] = useState<FundingStatus>(FundingStatus.All);
@@ -29,41 +31,38 @@ const ResearchHub: React.FC = () => {
     
     setLoading(true);
     try {
-      const researchProject = await contractInterface.getResearchProject();
-      let projectCount = 0;
-      let currentId = 1;
+      // Start with a reasonable upper limit and try to fetch projects until we hit an invalid one
+      const maxPossibleProjects = 100; // Can adjust this based on expected scale
       const projects = [];
 
-      // Keep trying to fetch projects until we hit an invalid ID
-      while (true) {
+      for (let id = 1; id <= maxPossibleProjects; id++) {
         try {
-          const project = await contractInterface.getProjectDetails(currentId.toString());
+          const project = await contractInterface.getProjectDetails(id.toString());
           if (project) {
-            projects.push(project);
-            currentId++;
-            projectCount++;
+            projects.push({
+              ...project,
+              projectId: id.toString()
+            });
           }
         } catch (err) {
-          // If we hit an invalid ID, we've found all projects
+          // If we get an error, assume we've hit the end of valid projects
           break;
         }
       }
       
-      let allProjects = projects;
+      let allProjects = [...projects];
       
       // Apply filters
       if (filterStatus !== FundingStatus.All) {
-        allProjects = allProjects.filter((p): p is ProjectDetails => {
-          if (!p) return false;
-          return filterStatus === FundingStatus.Active ? p.isActive : !p.isActive;
-        });
+        allProjects = allProjects.filter(p => 
+          filterStatus === FundingStatus.Active ? p.isActive : !p.isActive
+        );
       }
       
       if (selectedCategory !== 'all') {
-        allProjects = allProjects.filter((p): p is ProjectDetails => {
-          if (!p) return false;
-          return p.category === selectedCategory;
-        });
+        allProjects = allProjects.filter(p => 
+          p.category.toLowerCase() === selectedCategory.toLowerCase()
+        );
       }
       
       // Apply sorting
@@ -72,19 +71,18 @@ const ResearchHub: React.FC = () => {
           allProjects.sort((a, b) => b.createdAt - a.createdAt);
           break;
         case SortOption.MostFunded:
-          allProjects.sort((a, b) => parseFloat(b.currentFunding) - parseFloat(a.currentFunding));
+          allProjects.sort((a, b) => 
+            parseFloat(b.currentFunding) - parseFloat(a.currentFunding)
+          );
           break;
         case SortOption.Trending:
-          // Enhanced trending algorithm: recent projects with good funding progress
           allProjects.sort((a, b) => {
             const aProgress = parseFloat(a.currentFunding) / parseFloat(a.totalFunding);
             const bProgress = parseFloat(b.currentFunding) / parseFloat(b.totalFunding);
-            const aAge = (Date.now()/1000 - a.createdAt) / 86400; // age in days
+            const aAge = (Date.now()/1000 - a.createdAt) / 86400;
             const bAge = (Date.now()/1000 - b.createdAt) / 86400;
-            
-            const aScore = aProgress * (1 + 1 / Math.sqrt(1 + aAge));
-            const bScore = bProgress * (1 + 1 / Math.sqrt(1 + bAge));
-            
+            const aScore = aProgress * (1 + 1/Math.sqrt(1 + aAge));
+            const bScore = bProgress * (1 + 1/Math.sqrt(1 + bAge));
             return bScore - aScore;
           });
           break;
@@ -100,7 +98,7 @@ const ResearchHub: React.FC = () => {
 
   useEffect(() => {
     loadProjects();
-  }, [contractInterface, sortBy, filterStatus, selectedCategory, loadProjects]);
+  }, [loadProjects]);
 
   if (needsWallet) {
     return (
@@ -116,36 +114,43 @@ const ResearchHub: React.FC = () => {
     <div className="research-hub">
       <div className="research-hub-header">
         <h1>Research Hub</h1>
-        <div className="filters">
-          <select 
-            value={selectedCategory} 
-            onChange={e => setSelectedCategory(e.target.value)}
-          >
-            <option value="all">All Categories</option>
-            <option value="biotech">Biotech</option>
-            <option value="ai">Artificial Intelligence</option>
-            <option value="cleantech">Clean Technology</option>
-            <option value="quantum">Quantum Computing</option>
-            <option value="other">Other</option>
-          </select>
+        <div className="header-actions">
+          <div className="filters">
+            <select 
+              value={selectedCategory} 
+              onChange={e => setSelectedCategory(e.target.value)}
+            >
+              <option value="all">All Categories</option>
+              <option value="biotech">Biotechnology</option>
+              <option value="ai">Artificial Intelligence</option>
+              <option value="cleantech">Clean Technology</option>
+              <option value="medicine">Medicine</option>
+              <option value="physics">Physics</option>
+              <option value="other">Other</option>
+            </select>
+            
+            <select 
+              value={filterStatus} 
+              onChange={e => setFilterStatus(Number(e.target.value))}
+            >
+              <option value={FundingStatus.All}>All Projects</option>
+              <option value={FundingStatus.Active}>Active</option>
+              <option value={FundingStatus.Completed}>Completed</option>
+            </select>
+            
+            <select 
+              value={sortBy} 
+              onChange={e => setSortBy(Number(e.target.value))}
+            >
+              <option value={SortOption.Trending}>Trending</option>
+              <option value={SortOption.Newest}>Newest</option>
+              <option value={SortOption.MostFunded}>Most Funded</option>
+            </select>
+          </div>
           
-          <select 
-            value={filterStatus} 
-            onChange={e => setFilterStatus(Number(e.target.value))}
-          >
-            <option value={FundingStatus.All}>All Projects</option>
-            <option value={FundingStatus.Active}>Active</option>
-            <option value={FundingStatus.Completed}>Completed</option>
-          </select>
-          
-          <select 
-            value={sortBy} 
-            onChange={e => setSortBy(Number(e.target.value))}
-          >
-            <option value={SortOption.Trending}>Trending</option>
-            <option value={SortOption.Newest}>Newest</option>
-            <option value={SortOption.MostFunded}>Most Funded</option>
-          </select>
+          <Link to="/create-research" className="create-project-button">
+            Create Project
+          </Link>
         </div>
       </div>
 
@@ -155,8 +160,13 @@ const ResearchHub: React.FC = () => {
         <div className="projects-grid">
           {projects.map(project => (
             <div key={project.projectId} className="project-card">
-              <h3>{project.title}</h3>
+              <div className="project-header">
+                <h3>{project.title}</h3>
+                <span className="category-tag">{project.category}</span>
+              </div>
+              
               <p className="description">{project.description}</p>
+              
               <div className="project-stats">
                 <div className="funding-progress">
                   <div className="progress-bar">
@@ -167,25 +177,36 @@ const ResearchHub: React.FC = () => {
                       }}
                     />
                   </div>
-                  <span>
-                    {project.currentFunding} / {project.totalFunding} AVAX
+                  <div className="funding-info">
+                    <span>{parseFloat(project.currentFunding).toFixed(2)} AVAX raised</span>
+                    <span>Goal: {parseFloat(project.totalFunding).toFixed(2)} AVAX</span>
+                  </div>
+                </div>
+                
+                <div className="project-meta">
+                  <span className="researcher">
+                    By: {project.researcher.slice(0, 6)}...{project.researcher.slice(-4)}
+                  </span>
+                  <span className="deadline">
+                    {new Date(project.deadline * 1000).toLocaleDateString()}
                   </span>
                 </div>
-                <div className="milestones">
-                  <span>
-                    {project.milestones.filter((m: { isCompleted: boolean }) => m.isCompleted).length} / {project.milestones.length} Milestones
-                  </span>
-                </div>
-                <div className="category-tag">{project.category}</div>
               </div>
-              <button 
+
+              <Link 
+                to={`/project/${project.projectId}`} 
                 className="view-details"
-                onClick={() => window.location.href = `/project/${project.projectId}`}
               >
                 View Details
-              </button>
+              </Link>
             </div>
           ))}
+          
+          {projects.length === 0 && !loading && (
+            <div className="no-projects">
+              <p>No research projects found matching your criteria.</p>
+            </div>
+          )}
         </div>
       )}
     </div>

@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useWeb3 } from '../web3/hooks/useWeb3';
 import { ipfsService } from '../web3/utils/ipfs';
 import WalletPrompt from './WalletPrompt';
@@ -11,6 +12,7 @@ interface Milestone {
 }
 
 const CreateResearchProject: React.FC = () => {
+    const navigate = useNavigate();
     const { contractInterface, account, needsWallet, connectWallet } = useWeb3();
     const [title, setTitle] = useState('');
     const [description, setDescription] = useState('');
@@ -52,6 +54,10 @@ const CreateResearchProject: React.FC = () => {
         }
     };
 
+    const removeFile = (index: number) => {
+        setFiles(files.filter((_, i) => i !== index));
+    };
+
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!contractInterface || !account) return;
@@ -88,19 +94,19 @@ const CreateResearchProject: React.FC = () => {
 
             // Create on-chain project
             const deadlineTimestamp = Math.floor(new Date(deadline).getTime() / 1000);
-            const projectId = await contractInterface.createResearchProject(
+            const tx = await contractInterface.createResearchProject(
                 title,
                 description,
                 category,
                 metadataCID,
                 milestones.map(m => m.description),
-                milestones.map(m => m.targetAmount),
+                milestones.map(m => m.targetAmount), // Contract will handle conversion
                 verificationCIDs,
                 deadlineTimestamp
             );
 
-            // Redirect to project details page
-            window.location.href = `/project/${projectId}`;
+            await tx.wait();
+            navigate('/research');
 
         } catch (err: any) {
             console.error('Failed to create project:', err);
@@ -135,6 +141,7 @@ const CreateResearchProject: React.FC = () => {
                         onChange={(e) => setTitle(e.target.value)}
                         required
                         placeholder="Enter project title"
+                        disabled={isLoading}
                     />
                 </div>
 
@@ -147,6 +154,7 @@ const CreateResearchProject: React.FC = () => {
                         required
                         placeholder="Describe your research project"
                         rows={4}
+                        disabled={isLoading}
                     />
                 </div>
 
@@ -157,6 +165,7 @@ const CreateResearchProject: React.FC = () => {
                         value={category}
                         onChange={(e) => setCategory(e.target.value)}
                         required
+                        disabled={isLoading}
                     >
                         <option value="">Select a category</option>
                         <option value="biotech">Biotechnology</option>
@@ -177,6 +186,7 @@ const CreateResearchProject: React.FC = () => {
                         onChange={(e) => setDeadline(e.target.value)}
                         required
                         min={new Date().toISOString().split('.')[0]}
+                        disabled={isLoading}
                     />
                 </div>
 
@@ -188,8 +198,27 @@ const CreateResearchProject: React.FC = () => {
                         multiple
                         onChange={handleFileChange}
                         accept=".pdf,.doc,.docx,.txt,.zip"
+                        disabled={isLoading}
                     />
-                    <small>Upload relevant project documentation</small>
+                    <small>Upload relevant project documentation (PDF, DOC, TXT, ZIP)</small>
+                    
+                    {files.length > 0 && (
+                        <div className="file-list">
+                            {files.map((file, index) => (
+                                <div key={index} className="file-item">
+                                    <span>{file.name}</span>
+                                    <button
+                                        type="button"
+                                        onClick={() => removeFile(index)}
+                                        className="remove-file"
+                                        disabled={isLoading}
+                                    >
+                                        ×
+                                    </button>
+                                </div>
+                            ))}
+                        </div>
+                    )}
                 </div>
 
                 <div className="milestones-section">
@@ -206,6 +235,7 @@ const CreateResearchProject: React.FC = () => {
                                     required
                                     placeholder="Describe the milestone"
                                     rows={2}
+                                    disabled={isLoading}
                                 />
                             </div>
 
@@ -219,6 +249,7 @@ const CreateResearchProject: React.FC = () => {
                                     onChange={(e) => handleMilestoneChange(index, 'targetAmount', e.target.value)}
                                     required
                                     placeholder="Enter funding target"
+                                    disabled={isLoading}
                                 />
                             </div>
 
@@ -230,6 +261,7 @@ const CreateResearchProject: React.FC = () => {
                                     required
                                     placeholder="Define how this milestone will be verified"
                                     rows={2}
+                                    disabled={isLoading}
                                 />
                             </div>
 
@@ -238,6 +270,7 @@ const CreateResearchProject: React.FC = () => {
                                     type="button"
                                     onClick={() => removeMilestone(index)}
                                     className="remove-milestone"
+                                    disabled={isLoading}
                                 >
                                     Remove Milestone
                                 </button>
@@ -249,6 +282,7 @@ const CreateResearchProject: React.FC = () => {
                         type="button"
                         onClick={addMilestone}
                         className="add-milestone"
+                        disabled={isLoading}
                     >
                         Add Milestone
                     </button>

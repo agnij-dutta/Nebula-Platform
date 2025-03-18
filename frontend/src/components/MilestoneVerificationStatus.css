@@ -6,6 +6,9 @@
     padding: 1.5rem;
     margin: 1rem 0;
     transition: all 0.3s ease;
+    margin-top: 1.5rem;
+    padding-top: 1.5rem;
+    border-top: 1px solid var(--glass-border);
 }
 
 .verification-status:hover {
@@ -16,12 +19,21 @@
     text-align: center;
     color: rgba(var(--foreground-rgb), 0.6);
     padding: 2rem;
+    color: rgba(var(--foreground-rgb), 0.6);
+    text-align: center;
+    padding: 1rem;
 }
 
 .verification-status.error {
     background: rgba(239, 68, 68, 0.1);
     color: #ef4444;
     border: 1px solid rgba(239, 68, 68, 0.2);
+}
+
+.verification-status h4 {
+    color: rgb(var(--foreground-rgb));
+    margin-bottom: 1rem;
+    font-size: 1.1rem;
 }
 
 .status-indicator {
@@ -150,4 +162,137 @@
 .retry-button:hover {
     transform: translateY(-2px);
     box-shadow: 0 4px 12px var(--glow-shadow);
+}
+
+.criteria {
+    background: rgba(var(--foreground-rgb), 0.05);
+    border-radius: 8px;
+    padding: 1rem;
+    margin-bottom: 1.5rem;
+}
+
+.criteria h5 {
+    color: rgb(var(--foreground-rgb));
+    margin-bottom: 0.5rem;
+    font-size: 0.9rem;
+    font-weight: 500;
+}
+
+.criteria p {
+    color: rgba(var(--foreground-rgb), 0.8);
+    font-size: 0.95rem;
+    line-height: 1.6;
+}
+
+.status-info {
+    margin-bottom: 1.5rem;
+}
+
+.status {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.5rem 1rem;
+    border-radius: 16px;
+    font-size: 0.9rem;
+    font-weight: 500;
+}
+
+.status::before {
+    content: '';
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    margin-right: 0.5rem;
+}
+
+.status.pending {
+    background: rgba(245, 124, 0, 0.1);
+    color: #f57c00;
+}
+
+.status.pending::before {
+    background: #f57c00;
+}
+
+.status.verified {
+    background: rgba(46, 125, 50, 0.1);
+    color: #2e7d32;
+}
+
+.status.verified::before {
+    background: #2e7d32;
+}
+
+.status.rejected {
+    background: rgba(239, 68, 68, 0.1);
+    color: #ef4444;
+}
+
+.status.rejected::before {
+    background: #ef4444;
+}
+
+.verification-actions {
+    display: flex;
+    gap: 1rem;
+}
+
+.verification-actions button {
+    flex: 1;
+    padding: 0.75rem;
+    border: none;
+    border-radius: 8px;
+    font-size: 0.95rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.verify-button {
+    background: linear-gradient(45deg, #22c55e, #86efac);
+    color: white;
+}
+
+.verify-button:hover:not(:disabled) {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(34, 197, 94, 0.3);
+}
+
+.reject-button {
+    background: linear-gradient(45deg, #ef4444, #fca5a5);
+    color: white;
+}
+
+.reject-button:hover:not(:disabled) {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
+}
+
+.verification-actions button:disabled {
+    background: rgba(var(--foreground-rgb), 0.1);
+    color: rgba(var(--foreground-rgb), 0.4);
+    cursor: not-allowed;
+    transform: none;
+    box-shadow: none;
+}
+
+.error-message {
+    margin-top: 1rem;
+    padding: 0.75rem;
+    background: rgba(239, 68, 68, 0.1);
+    border: 1px solid rgba(239, 68, 68, 0.2);
+    border-radius: 8px;
+    color: #ef4444;
+    font-size: 0.9rem;
+}
+
+@media (max-width: 768px) {
+    .verification-actions {
+        flex-direction: column;
+    }
+
+    .verification-actions button {
+        width: 100%;
+    }
 }

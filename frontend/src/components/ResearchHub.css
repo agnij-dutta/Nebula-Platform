@@ -1,18 +1,28 @@
 .research-hub {
     max-width: 1200px;
     margin: 2rem auto;
-    padding: 0 1rem;
+    padding: 0 2rem;
 }
 
 .research-hub-header {
-    margin-bottom: 2rem;
+    margin-bottom: 3rem;
     text-align: center;
 }
 
 .research-hub-header h1 {
     margin-bottom: 1.5rem;
-    color: #2d3748;
-    font-size: 2.25rem;
+    font-size: 2.5rem;
+    background: linear-gradient(45deg, #8B5CF6, #E0E7FF);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+
+.header-actions {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 1rem;
 }
 
 .filters {
@@ -20,58 +30,89 @@
     gap: 1rem;
     justify-content: center;
     margin-bottom: 2rem;
+    flex-wrap: wrap;
 }
 
 .filters select {
     padding: 0.75rem 1rem;
-    border: 2px solid #e2e8f0;
+    background: var(--glass-bg);
+    backdrop-filter: blur(10px);
+    border: 1px solid var(--glass-border);
     border-radius: 8px;
-    background-color: white;
-    color: #4a5568;
-    font-size: 1rem;
+    color: rgb(var(--foreground-rgb));
+    font-size: 0.9rem;
     cursor: pointer;
     transition: all 0.2s;
 }
 
 .filters select:hover {
-    border-color: #4299e1;
+    border-color: #8B5CF6;
 }
 
 .filters select:focus {
     outline: none;
-    border-color: #4299e1;
-    box-shadow: 0 0 0 2px rgba(66, 153, 225, 0.2);
+    border-color: #8B5CF6;
+    box-shadow: 0 0 0 2px rgba(139, 92, 246, 0.2);
+}
+
+.create-project-button {
+    padding: 0.75rem 1.5rem;
+    background: linear-gradient(45deg, #8B5CF6, #E0E7FF);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-size: 1rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    text-decoration: none;
+}
+
+.create-project-button:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px var(--glow-shadow);
 }
 
 .projects-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
     gap: 2rem;
 }
 
 .project-card {
-    background: white;
-    border-radius: 12px;
+    background: var(--glass-bg);
+    backdrop-filter: blur(10px);
+    border: 1px solid var(--glass-border);
+    border-radius: 16px;
     padding: 1.5rem;
-    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-    transition: transform 0.2s, box-shadow 0.2s;
+    transition: all 0.3s ease;
+    position: relative;
+    overflow: hidden;
+    animation: fadeInUp 0.3s ease-out forwards;
 }
 
 .project-card:hover {
     transform: translateY(-4px);
-    box-shadow: 0 8px 12px rgba(0, 0, 0, 0.1);
+    box-shadow: 0 4px 20px var(--glow-shadow);
 }
 
-.project-card h3 {
-    margin: 0 0 1rem;
-    color: #2d3748;
+.project-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 1rem;
+}
+
+.project-header h3 {
+    margin: 0;
     font-size: 1.25rem;
+    color: rgb(var(--foreground-rgb));
 }
 
 .project-card .description {
-    color: #4a5568;
+    color: rgba(var(--foreground-rgb), 0.8);
     margin-bottom: 1.5rem;
-    line-height: 1.5;
+    line-height: 1.6;
     display: -webkit-box;
     -webkit-line-clamp: 3;
     -webkit-box-orient: vertical;
@@ -88,7 +129,7 @@
 
 .progress-bar {
     height: 8px;
-    background: #edf2f7;
+    background: rgba(var(--foreground-rgb), 0.1);
     border-radius: 4px;
     overflow: hidden;
     margin-bottom: 0.5rem;
@@ -96,73 +137,105 @@
 
 .progress {
     height: 100%;
-    background: linear-gradient(90deg, #4299e1, #667eea);
-    border-radius: 4px;
+    background: linear-gradient(90deg, #8B5CF6, #E0E7FF);
     transition: width 0.3s ease;
 }
 
-.funding-progress span {
-    color: #4a5568;
-    font-size: 0.875rem;
-}
-
-.milestones {
+.funding-info {
     display: flex;
-    align-items: center;
-    margin-bottom: 1rem;
+    justify-content: space-between;
+    color: rgba(var(--foreground-rgb), 0.8);
+    font-size: 0.9rem;
 }
 
-.milestones span {
-    color: #4a5568;
-    font-size: 0.875rem;
+.project-meta {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    color: rgba(var(--foreground-rgb), 0.6);
+    font-size: 0.9rem;
 }
 
 .category-tag {
     display: inline-block;
     padding: 0.25rem 0.75rem;
-    background: #ebf8ff;
-    color: #2b6cb0;
-    border-radius: 9999px;
-    font-size: 0.75rem;
+    background: rgba(139, 92, 246, 0.1);
+    color: #8B5CF6;
+    border-radius: 16px;
+    font-size: 0.8rem;
     font-weight: 500;
 }
 
 .view-details {
+    display: block;
     width: 100%;
     padding: 0.75rem;
-    background: #4299e1;
+    background: linear-gradient(45deg, #8B5CF6, #E0E7FF);
     color: white;
+    text-align: center;
     border: none;
     border-radius: 8px;
     font-size: 1rem;
     font-weight: 500;
     cursor: pointer;
-    transition: background-color 0.2s;
+    transition: all 0.3s ease;
+    text-decoration: none;
 }
 
 .view-details:hover {
-    background: #3182ce;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px var(--glow-shadow);
 }
 
 .loading {
     text-align: center;
-    padding: 2rem;
-    color: #4a5568;
-    font-size: 1.125rem;
+    padding: 3rem;
+    color: rgba(var(--foreground-rgb), 0.6);
+    font-size: 1.1rem;
+    animation: pulse 1.5s infinite;
+}
+
+.no-projects {
+    grid-column: 1 / -1;
+    text-align: center;
+    padding: 3rem;
+    color: rgba(var(--foreground-rgb), 0.6);
+    background: var(--glass-bg);
+    backdrop-filter: blur(10px);
+    border: 1px solid var(--glass-border);
+    border-radius: 16px;
 }
 
 @media (max-width: 768px) {
     .filters {
         flex-direction: column;
         align-items: stretch;
+        width: 100%;
     }
 
     .research-hub-header h1 {
-        font-size: 1.875rem;
+        font-size: 2rem;
     }
 
     .projects-grid {
         grid-template-columns: 1fr;
+    }
+
+    .research-hub {
+        padding: 0 1rem;
+    }
+
+    .header-actions {
+        flex-direction: column;
+    }
+
+    .filters select {
+        width: 100%;
+    }
+
+    .create-project-button {
+        width: 100%;
+        text-align: center;
     }
 }
 
@@ -178,19 +251,11 @@
     }
 }
 
-.project-card {
-    animation: fadeInUp 0.3s ease-out forwards;
-}
-
 /* Loading animation */
 @keyframes pulse {
     0% { opacity: 1; }
     50% { opacity: 0.5; }
     100% { opacity: 1; }
-}
-
-.loading {
-    animation: pulse 1.5s infinite;
 }
 
 /* Hover effects */

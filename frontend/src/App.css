@@ -11,168 +11,171 @@
 }
 
 .App {
-    text-align: center;
-    min-height: 100vh;
-    background: linear-gradient(
-        to bottom,
-        rgb(var(--background-start-rgb)),
-        rgb(var(--background-end-rgb))
-    );
-    color: rgb(var(--foreground-rgb));
+  text-align: center;
+  min-height: 100vh;
+  background: linear-gradient(
+    to bottom,
+    rgb(var(--background-start-rgb)),
+    rgb(var(--background-end-rgb))
+  );
+  color: rgb(var(--foreground-rgb));
 }
 
 .App-logo {
-    height: 40vmin;
-    pointer-events: none;
+  height: 40vmin;
+  pointer-events: none;
 }
 
 @media (prefers-reduced-motion: no-preference) {
-    .App-logo {
-        animation: App-logo-spin infinite 20s linear;
-    }
+  .App-logo {
+    animation: App-logo-spin infinite 20s linear;
+  }
 }
 
 .App-header {
-    background: var(--glass-bg);
-    backdrop-filter: blur(10px);
-    border-bottom: 1px solid var(--glass-border);
-    padding: 1rem 0;
-    position: sticky;
-    top: 0;
-    z-index: 100;
+  padding: 1rem;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  background: var(--glass-bg);
+  backdrop-filter: blur(10px);
+  border-bottom: 1px solid var(--glass-border);
 }
 
 .header-content {
-    max-width: 1200px;
-    margin: 0 auto;
-    padding: 0 2rem;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    flex-wrap: wrap;
-    gap: 20px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0.5rem 1rem;
+  border-radius: 12px;
+  background: var(--glass-bg);
+  backdrop-filter: blur(10px);
+  border: 1px solid var(--glass-border);
 }
 
 .nav-links {
-    display: flex;
-    gap: 2rem;
+  display: flex;
+  gap: 2rem;
 }
 
 .nav-links a {
-    text-decoration: none;
-    color: rgb(var(--foreground-rgb));
-    padding: 0.5rem 1rem;
-    border-radius: 8px;
-    transition: all 0.2s ease;
+  color: rgb(var(--foreground-rgb));
+  text-decoration: none;
+  font-family: 'Space Grotesk', sans-serif;
+  transition: all 0.3s ease;
+  padding: 0.5rem 1rem;
+  border-radius: 8px;
 }
 
 .nav-links a:hover {
-    background: rgba(139, 92, 246, 0.1);
+  color: rgb(var(--nebula-purple));
+  text-shadow: 0 0 10px var(--glow-shadow);
+  background: rgba(139, 92, 246, 0.1);
 }
 
 .nav-links a.active {
-    background: rgba(139, 92, 246, 0.2);
-    color: #8B5CF6;
+  color: rgb(var(--nebula-purple));
+  font-weight: bold;
+  background: rgba(139, 92, 246, 0.2);
 }
 
 .wallet-section {
-    display: flex;
-    align-items: center;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
 }
 
 .connect-button {
-    background: linear-gradient(45deg, #8B5CF6, #E0E7FF);
-    color: white;
-    border: none;
-    padding: 0.75rem 1.5rem;
-    border-radius: 8px;
-    cursor: pointer;
-    transition: all 0.3s ease;
-    font-weight: 500;
+  background: linear-gradient(45deg, #8B5CF6, #E0E7FF);
+  color: white;
+  border: none;
+  padding: 0.75rem 1.5rem;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  font-weight: 500;
 }
 
 .connect-button:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 4px 12px var(--glow-shadow);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px var(--glow-shadow);
 }
 
 .account-container {
-    display: flex;
-    align-items: center;
-    gap: 15px;
+  display: flex;
+  align-items: center;
+  gap: 15px;
 }
 
 .account-info {
-    display: flex;
-    align-items: center;
-    gap: 1rem;
-    font-family: monospace;
-    background-color: rgba(97, 218, 251, 0.1);
-    padding: 8px 16px;
-    border-radius: 4px;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  font-family: monospace;
+  background-color: rgba(97, 218, 251, 0.1);
+  padding: 8px 16px;
+  border-radius: 4px;
 }
 
 .address {
-    background-color: #f8f9fa;
-    padding: 0.5rem 1rem;
-    border-radius: 4px;
-    color: #2c3e50;
+  background-color: #f8f9fa;
+  padding: 0.5rem 1rem;
+  border-radius: 4px;
+  color: #2c3e50;
 }
 
 .network-switch-button {
-    background-color: #ff6b6b;
-    color: white;
-    border: none;
-    padding: 8px 16px;
-    border-radius: 4px;
-    cursor: pointer;
-    font-size: 14px;
-    transition: background-color 0.3s;
+  background-color: #ff6b6b;
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+  transition: background-color 0.3s;
 }
 
 .network-switch-button:hover {
-    background-color: #e95555;
+  background-color: #e95555;
 }
 
 .network-button {
-    padding: 0.5rem 1rem;
-    border: none;
-    border-radius: 4px;
-    cursor: pointer;
-    transition: all 0.2s ease;
+  padding: 0.5rem 1rem;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.2s ease;
 }
 
 .network-button.error {
-    background-color: #fee2e2;
-    color: #ef4444;
+  background-color: #fee2e2;
+  color: #ef4444;
 }
 
 .network-button.error:hover {
-    background-color: #fecaca;
+  background-color: #fecaca;
 }
 
 .view-toggle {
-    display: flex;
-    gap: 10px;
+  display: flex;
+  gap: 10px;
 }
 
 .toggle-button {
-    background: transparent;
-    color: #fff;
-    border: 2px solid #61dafb;
-    padding: 8px 16px;
-    border-radius: 4px;
-    cursor: pointer;
-    transition: all 0.3s;
+  background: transparent;
+  color: #fff;
+  border: 2px solid #61dafb;
+  padding: 8px 16px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.3s;
 }
 
 .toggle-button:hover {
-    background-color: rgba(97, 218, 251, 0.1);
-}
-
-.toggle-button.active {
-    background-color: #61dafb;
-    color: #282c34;
+  background: #61dafb;
+  color: #282c34;
 }
 
 .error-message {
