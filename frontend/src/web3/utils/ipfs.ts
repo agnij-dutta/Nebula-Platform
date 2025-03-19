@@ -1,15 +1,20 @@
 import { create } from 'ipfs-http-client';
 import { Buffer } from 'buffer';
 
-// Configure IPFS client to use Infura's IPFS gateway
-const projectId = 'YOUR_INFURA_PROJECT_ID';
-const projectSecret = 'YOUR_INFURA_PROJECT_SECRET';
-const auth = 'Basic ' + Buffer.from(projectId + ':' + projectSecret).toString('base64');
+// Configure IPFS client using environment variables
+const projectId = process.env.REACT_APP_IPFS_PROJECT_ID;
+const projectSecret = process.env.REACT_APP_IPFS_PROJECT_SECRET;
+
+if (!projectId || !projectSecret) {
+    console.error('IPFS credentials not found in environment variables');
+}
+
+const auth = 'Basic ' + Buffer.from(`${projectId}:${projectSecret}`).toString('base64');
 
 const client = create({
-    host: 'ipfs.infura.io',
-    port: 5001,
-    protocol: 'https',
+    host: process.env.REACT_APP_IPFS_HOST || 'ipfs.infura.io',
+    port: parseInt(process.env.REACT_APP_IPFS_PORT || '5001'),
+    protocol: process.env.REACT_APP_IPFS_PROTOCOL || 'https',
     headers: {
         authorization: auth,
     },
@@ -39,7 +44,8 @@ export const ipfsService = {
     },
 
     getIPFSUrl(cid: string): string {
-        return `https://ipfs.io/ipfs/${cid}`;
+        return `${process.env.REACT_APP_IPFS_GATEWAY || 'https://ipfs.io/ipfs/'}${cid}`;
     }
 };
+
 export default ipfsService;

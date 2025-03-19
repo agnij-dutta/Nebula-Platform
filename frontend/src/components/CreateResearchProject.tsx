@@ -66,6 +66,20 @@ const CreateResearchProject: React.FC = () => {
         setError('');
 
         try {
+            // Validate deadline
+            const deadlineDate = new Date(deadline);
+            const currentDate = new Date();
+            
+            if (deadlineDate <= currentDate) {
+                throw new Error('Deadline must be in the future');
+            }
+
+            // Add 1 day buffer to ensure blockchain timestamp validation passes
+            const deadlineTimestamp = Math.floor(deadlineDate.getTime() / 1000);
+            if (deadlineTimestamp <= Math.floor(Date.now() / 1000)) {
+                throw new Error('Invalid deadline timestamp');
+            }
+
             // Upload project files to IPFS
             const fileUploads = await Promise.all(
                 files.map(file => ipfsService.uploadFile(file))
@@ -93,7 +107,6 @@ const CreateResearchProject: React.FC = () => {
             );
 
             // Create on-chain project
-            const deadlineTimestamp = Math.floor(new Date(deadline).getTime() / 1000);
             const tx = await contractInterface.createResearchProject(
                 title,
                 description,
@@ -114,6 +127,12 @@ const CreateResearchProject: React.FC = () => {
         } finally {
             setIsLoading(false);
         }
+    };
+
+    const getCurrentDateTimeLocal = () => {
+        const now = new Date();
+        now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
+        return now.toISOString().slice(0, 16);
     };
 
     if (needsWallet) {
@@ -185,7 +204,7 @@ const CreateResearchProject: React.FC = () => {
                         value={deadline}
                         onChange={(e) => setDeadline(e.target.value)}
                         required
-                        min={new Date().toISOString().split('.')[0]}
+                        min={getCurrentDateTimeLocal()}
                         disabled={isLoading}
                     />
                 </div>
