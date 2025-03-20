@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import { BrowserRouter as Router, Routes, Route, Link } from 'react-router-dom';
 import { useWeb3 } from './web3/hooks/useWeb3';
 import { WEB3_CONFIG } from './web3/config';
@@ -13,6 +13,7 @@ import Governance from './components/Governance';
 import Staking from './components/Staking';
 import WalletPrompt from './components/WalletPrompt';
 import TokenSwap from './components/TokenSwap';
+import ErrorDisplay from './components/ErrorDisplay';
 import './App.css';
 import './styles/theme.css';
 
@@ -30,6 +31,8 @@ function App() {
     } = useWeb3();
     const [activeView, setActiveView] = useState<'browse' | 'create' | 'createIP' | 'research' | 'governance' | 'staking' | 'swap' | 'dashboard'>('browse');
     const [createdTokenId, setCreatedTokenId] = useState<string | null>(null);
+    const [globalError, setGlobalError] = useState<string | null>(null);
+    const [isRetrying, setIsRetrying] = useState(false);
     
     const isWrongNetwork = chainId && chainId !== WEB3_CONFIG.NETWORKS.TESTNET.chainId;
 
@@ -42,6 +45,18 @@ function App() {
         setCreatedTokenId(null);
         setActiveView('browse');
     };
+
+    const handleNetworkError = useCallback(async () => {
+        setIsRetrying(true);
+        try {
+            await switchToFujiTestnet();
+            setGlobalError(null);
+        } catch (err) {
+            setGlobalError('Failed to switch network. Please try again or switch manually in MetaMask.');
+        } finally {
+            setIsRetrying(false);
+        }
+    }, [switchToFujiTestnet]);
 
     // Show global wallet prompt if no wallet is connected
     if (needsWallet) {
@@ -94,7 +109,7 @@ function App() {
                                                 Create IP
                                             </Link>
                                             <Link to="/dashboard" className={activeView === 'dashboard' ? 'active' : ''}>
-                                                My Projects
+                                                Dashboard
                                             </Link>
                                         </>
                                     )}
@@ -103,11 +118,11 @@ function App() {
                                 <div className="wallet-section">
                                     {isWrongNetwork ? (
                                         <button 
-                                            onClick={switchToFujiTestnet} 
-                                            className={`network-button error ${isNetworkSwitching ? 'switching' : ''}`}
-                                            disabled={isNetworkSwitching}
+                                            onClick={handleNetworkError} 
+                                            className={`network-button error ${isNetworkSwitching || isRetrying ? 'switching' : ''}`}
+                                            disabled={isNetworkSwitching || isRetrying}
                                         >
-                                            {isNetworkSwitching ? (
+                                            {isNetworkSwitching || isRetrying ? (
                                                 <>Switching Network<span className="loading-dots"></span></>
                                             ) : (
                                                 `Switch to ${WEB3_CONFIG.NETWORKS.TESTNET.name}`
@@ -128,17 +143,20 @@ function App() {
                             </div>
                         </header>
 
-                        {web3Error && (
-                            <div className="error-banner">{web3Error}</div>
+                        {(web3Error || globalError) && (
+                            <ErrorDisplay 
+                                message={globalError || web3Error}
+                                onRetry={isWrongNetwork ? handleNetworkError : undefined}
+                            />
                         )}
 
                         <main className="App-content">
                             {isWrongNetwork ? (
                                 <WalletPrompt 
                                     message={`Please switch to ${WEB3_CONFIG.NETWORKS.TESTNET.name} to continue`}
-                                    onConnect={switchToFujiTestnet}
-                                    isNetworkSwitching={isNetworkSwitching}
-                                    isLoading={isNetworkSwitching}
+                                    onConnect={handleNetworkError}
+                                    isNetworkSwitching={isNetworkSwitching || isRetrying}
+                                    isLoading={isNetworkSwitching || isRetrying}
                                 />
                             ) : (
                                 <Routes>

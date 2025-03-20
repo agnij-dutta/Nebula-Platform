@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { ethers } from 'ethers';
 import { useWeb3 } from '../web3/hooks/useWeb3';
 import WalletPrompt from './WalletPrompt';
+import ErrorDisplay from './ErrorDisplay';
 import './Governance.css';
 import { WEB3_CONFIG } from '../web3/config';
 
@@ -33,7 +34,9 @@ const Governance: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [neblBalance, setNeblBalance] = useState('0');
   const [isCreatingProposal, setIsCreatingProposal] = useState(false);
+  const [isVoting, setIsVoting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [isRetrying, setIsRetrying] = useState(false);
   const [proposalForm, setProposalForm] = useState({
     title: '',
     description: '',
@@ -92,8 +95,10 @@ const Governance: React.FC = () => {
           try {
               latestBlock = await provider.getBlockNumber();
               break;
-          } catch (err) {
-              if (retries === 0) throw err;
+          } catch (err: any) {
+              if (retries === 0) {
+                  throw new Error('Network error: Failed to get latest block number. Please try again.');
+              }
               retries--;
               await new Promise(resolve => 
                   setTimeout(resolve, 
@@ -140,9 +145,14 @@ const Governance: React.FC = () => {
       setProposals(loadedProposals);
     } catch (err: any) {
       console.error('Failed to load proposals:', err);
-      setError(err.message || 'Failed to load proposals');
+      if (err?.code === -32603) {
+          setError('Network error: Failed to load proposals. Please check your connection and try again.');
+      } else {
+          setError(err.message || 'Failed to load proposals');
+      }
     } finally {
       setLoading(false);
+      setIsRetrying(false);
     }
   }, [contractInterface, loadProposalsInBatches]);
 
@@ -153,8 +163,11 @@ const Governance: React.FC = () => {
       const neblToken = await contractInterface.getNEBLToken();
       const balance = await neblToken.balanceOf(account);
       setNeblBalance(ethers.utils.formatEther(balance));
-    } catch (err) {
+    } catch (err: any) {
       console.error('Failed to load NEBL balance:', err);
+      if (err?.code === -32603) {
+          console.warn('Network error while loading NEBL balance, will retry on next update');
+      }
     }
   }, [contractInterface, account]);
 
@@ -165,11 +178,18 @@ const Governance: React.FC = () => {
     }
   }, [contractInterface, account, loadProposals, loadNeblBalance]);
 
+  const handleRetry = useCallback(() => {
+    setIsRetrying(true);
+    loadProposals();
+  }, [loadProposals]);
+
   const handleCreateProposal = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!contractInterface) return;
 
     setIsCreatingProposal(true);
+    setError(null);
+    
     try {
       const description = `${proposalForm.title}\n\n${proposalForm.description}`;
       const targets = [proposalForm.targetContract];
@@ -181,7 +201,7 @@ const Governance: React.FC = () => {
         )
       ];
 
-      await contractInterface.createProposal(
+      const tx = await contractInterface.createProposal(
         targets,
         values,
         calldatas,
@@ -198,8 +218,13 @@ const Governance: React.FC = () => {
       });
 
       await loadProposals();
-    } catch (err) {
+    } catch (err: any) {
       console.error('Failed to create proposal:', err);
+      if (err?.code === -32603) {
+          setError('Network error: Failed to create proposal. Please check your connection and try again.');
+      } else {
+          setError(err.message || 'Failed to create proposal');
+      }
     } finally {
       setIsCreatingProposal(false);
     }
@@ -207,12 +232,36 @@ const Governance: React.FC = () => {
 
   const handleVote = async (proposalId: string, support: boolean) => {
     if (!contractInterface) return;
+    setIsVoting(true);
+    setError(null);
     
+    const retryVote = async (currentTry: number, maxRetries: number): Promise<void> => {
+      try {
+        const tx = await contractInterface.castVote(proposalId, support);
+        await tx.wait();
+        await loadProposals();
+      } catch (err) {
+        if (currentTry < maxRetries) {
+          console.warn(`Vote attempt ${currentTry + 1} failed, retrying...`);
+          await new Promise(resolve => setTimeout(resolve, Math.pow(2, currentTry) * 1000));
+          await retryVote(currentTry + 1, maxRetries);
+        } else {
+          throw err;
+        }
+      }
+    };
+
     try {
-      await contractInterface.castVote(proposalId, support);
-      await loadProposals();
-    } catch (err) {
+      await retryVote(0, 3);
+    } catch (err: any) {
       console.error('Failed to cast vote:', err);
+      if (err?.code === -32603) {
+        setError('Network error: Failed to cast vote. Please check your connection and try again.');
+      } else {
+        setError(err.message || 'Failed to cast vote');
+      }
+    } finally {
+      setIsVoting(false);
     }
   };
 
@@ -249,9 +298,14 @@ const Governance: React.FC = () => {
       </div>
 
       {error ? (
-        <div className="error-message">{error}</div>
+        <ErrorDisplay 
+          message={error}
+          onRetry={handleRetry}
+        />
       ) : loading ? (
-        <div className="loading">Loading proposals...</div>
+        <div className="loading">
+          {isRetrying ? 'Retrying...' : 'Loading proposals...'}
+        </div>
       ) : (
         <div className="proposals-section">
           <h2>Active Proposals</h2>

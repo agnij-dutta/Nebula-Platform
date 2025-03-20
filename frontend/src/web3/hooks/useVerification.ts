@@ -1,110 +1,48 @@
 import { useState, useCallback } from 'react';
 import { useWeb3 } from './useWeb3';
-
-interface UseVerificationOptions {
-    projectId: string;
-    milestoneId: string;
-}
+import { VerificationRequest } from '../../types/contracts';
 
 export interface VerificationStatus {
-    status: 'pending' | 'processing' | 'verified' | 'failed';
-    requestId?: string;
+    status: 'idle' | 'processing' | 'success' | 'error';
     error?: string;
 }
 
-export function useVerification({ projectId, milestoneId }: UseVerificationOptions) {
+export const useVerification = ({ projectId, milestoneId }: { projectId: string; milestoneId: string }) => {
     const { contractInterface } = useWeb3();
-    const [status, setStatus] = useState<VerificationStatus>({ status: 'pending' });
+    const [status, setStatus] = useState<VerificationStatus>({ status: 'idle' });
 
-    const startPolling = useCallback(async (requestId: string) => {
-        if (!contractInterface) return;
+    const requestVerification = useCallback(async (proof: string, verificationCriteria: string) => {
+        if (!contractInterface) {
+            throw new Error('Web3 not initialized');
+        }
 
-        const pollInterval = setInterval(async () => {
-            try {
-                const oracle = await contractInterface.getMilestoneOracle();
-                const request = await oracle.verificationRequests(requestId);
-
-                if (!request.isProcessing) {
-                    clearInterval(pollInterval);
-                    setStatus({
-                        status: request.isVerified ? 'verified' : 'failed',
-                        requestId
-                    });
-                }
-            } catch (error) {
-                clearInterval(pollInterval);
-                setStatus({
-                    status: 'failed',
-                    requestId,
-                    error: 'Failed to check verification status'
-                });
-            }
-        }, 5000); // Poll every 5 seconds
-
-        // Clean up interval after 10 minutes
-        setTimeout(() => {
-            clearInterval(pollInterval);
-            setStatus(current => {
-                if (current.status === 'processing') {
-                    return {
-                        status: 'failed',
-                        requestId,
-                        error: 'Verification timed out'
-                    };
-                }
-                return current;
-            });
-        }, 600000);
-
-    }, [contractInterface]);
-
-    const requestVerification = useCallback(async (proofCID: string, verificationCID: string) => {
-        if (!contractInterface) return;
+        setStatus({ status: 'processing' });
 
         try {
-            setStatus({ status: 'processing' });
-            
-            const oracle = await contractInterface.getMilestoneOracle();
-            const chainlinkJobId = 'milestone-verification-v1';
-            const payment = '100000000000000000'; // 0.1 LINK
-            
-            // Request verification through the oracle
-            const tx = await oracle.requestVerification(
+            const request: VerificationRequest = {
                 projectId,
                 milestoneId,
-                proofCID,
-                verificationCID,
-                oracle.address,
-                chainlinkJobId,
-                payment
-            );
+                proofCID: proof,
+                verificationCID: verificationCriteria,
+                verificationMethods: ['manual'],
+                requiredConfidence: 1,
+                deadline: Math.floor(Date.now() / 1000) + 86400 // 24 hours
+            };
 
-            const receipt = await tx.wait();
-            
-            // Find VerificationRequested event
-            const event = receipt.events?.find(
-                (e: any) => e.event === 'VerificationRequested'
-            );
-
-            if (event) {
-                setStatus({ 
-                    status: 'processing',
-                    requestId: event.args.requestId 
-                });
-
-                // Start polling for verification status
-                startPolling(event.args.requestId);
-            }
+            const tx = await contractInterface.requestMilestoneVerification(request);
+            await tx.wait();
+            setStatus({ status: 'success' });
         } catch (error: any) {
             setStatus({ 
-                status: 'failed',
-                error: error.message || 'Failed to request verification' 
+                status: 'error',
+                error: error.message || 'Verification request failed'
             });
+            throw error;
         }
-    }, [contractInterface, projectId, milestoneId, startPolling]);
+    }, [contractInterface, projectId, milestoneId]);
 
     const resetStatus = useCallback(() => {
-        setStatus({ status: 'pending' });
+        setStatus({ status: 'idle' });
     }, []);
 
     return {
@@ -112,4 +50,4 @@ export function useVerification({ projectId, milestoneId }: UseVerificationOptio
         requestVerification,
         resetStatus
     };
-}
+};

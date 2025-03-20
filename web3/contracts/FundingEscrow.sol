@@ -11,7 +11,7 @@ contract FundingEscrow is ReentrancyGuard {
     
     AggregatorV3Interface private immutable priceFeed;
     address public immutable oracle;
-    address public immutable researchProjectContract;
+    address public researchProjectContract;
     
     struct Escrow {
         uint256 projectId;
@@ -37,6 +37,11 @@ contract FundingEscrow is ReentrancyGuard {
     modifier onlyOracle() {
         require(msg.sender == oracle, "Only oracle can call");
         _;
+    }
+
+    function setResearchProjectContract(address _researchProjectContract) external {
+        require(msg.sender == oracle, "Only oracle can update");
+        researchProjectContract = _researchProjectContract;
     }
 
     function createEscrow(uint256 projectId) external {

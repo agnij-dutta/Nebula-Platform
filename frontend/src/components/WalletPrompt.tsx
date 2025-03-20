@@ -2,17 +2,6 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { WEB3_CONFIG } from '../web3/config';
 import './WalletPrompt.css';
 
-declare global {
-    interface Window {
-        ethereum?: {
-            isMetaMask?: boolean;
-            request: (args: { method: string; params?: any[] }) => Promise<any>;
-            on: (eventName: string, handler: (...args: any[]) => void) => void;
-            removeListener: (eventName: string, handler: (...args: any[]) => void) => void;
-        };
-    }
-}
-
 interface WalletPromptProps {
     message?: string;
     onConnect: () => Promise<void>;

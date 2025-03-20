@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useWeb3 } from '../web3/hooks/useWeb3';
-import { ipfsService } from '../web3/utils/ipfs';
 import WalletPrompt from './WalletPrompt';
 import './CreateResearchProject.css';
 
@@ -80,46 +79,33 @@ const CreateResearchProject: React.FC = () => {
                 throw new Error('Invalid deadline timestamp');
             }
 
-            // Upload project files to IPFS
-            const fileUploads = await Promise.all(
-                files.map(file => ipfsService.uploadFile(file))
-            );
-
-            // Create project metadata
-            const metadata = {
-                title,
-                description,
-                category,
-                files: fileUploads,
-                createdAt: new Date().toISOString(),
-                creator: account
-            };
-
-            // Upload metadata to IPFS
-            const metadataCID = await ipfsService.uploadJSON(metadata);
-
-            // Upload verification criteria for each milestone
-            const verificationCIDs = await Promise.all(
-                milestones.map(m => ipfsService.uploadJSON({
-                    criteria: m.verificationCriteria,
-                    timestamp: new Date().toISOString()
-                }))
-            );
-
-            // Create on-chain project
+            // Create on-chain project directly without IPFS
             const tx = await contractInterface.createResearchProject(
                 title,
                 description,
                 category,
-                metadataCID,
+                "", // Empty metadataURI since we're not using IPFS yet
                 milestones.map(m => m.description),
-                milestones.map(m => m.targetAmount), // Contract will handle conversion
-                verificationCIDs,
+                milestones.map(m => m.targetAmount),
+                milestones.map(m => m.verificationCriteria),
                 deadlineTimestamp
             );
 
-            await tx.wait();
-            navigate('/research');
+            // Wait for the transaction to be mined and get the receipt
+            const receipt = await tx.wait();
+            const event = receipt.events?.find((e: { event: string }) => e.event === 'ProjectCreated');
+            if (!event) {
+                throw new Error('Failed to get project creation event');
+            }
+
+            // Small delay to allow blockchain state to update
+            await new Promise(resolve => setTimeout(resolve, 2000));
+            
+            // Navigate back to research hub
+            navigate('/research', { replace: true });
+            
+            // Force a page refresh to update the projects list
+            window.location.reload();
 
         } catch (err: any) {
             console.error('Failed to create project:', err);

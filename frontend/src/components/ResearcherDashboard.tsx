@@ -5,6 +5,7 @@ import { useWeb3 } from '../web3/hooks/useWeb3';
 import { ProjectDetails } from '../web3/utils/contracts';
 import CreateListing from './CreateListing';
 import WalletPrompt from './WalletPrompt';
+import ErrorDisplay from './ErrorDisplay';
 import './ResearcherDashboard.css';
 
 enum DashboardTab {
@@ -29,10 +30,12 @@ const ResearcherDashboard: React.FC = () => {
     const [totalFunding, setTotalFunding] = useState<string>('0');
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
+    const [isRetrying, setIsRetrying] = useState(false);
 
     const loadProjects = useCallback(async () => {
         if (!contractInterface || !account) return;
-
+        setLoading(true);
+        setError('');
         try {
             const maxPossibleProjects = 100;
             const projects = [];
@@ -46,32 +49,44 @@ const ResearcherDashboard: React.FC = () => {
                             ...project,
                             projectId: i.toString()
                         });
-                        total = total.add(ethers.utils.parseEther(project.currentFunding));
+                        total = total.add(project.currentFunding);
                     }
-                } catch (err) {
+                } catch (err: any) {
+                    if (err?.code === -32603) {
+                        throw new Error('Network error. Please check your connection and try again.');
+                    }
                     break;
                 }
             }
 
             setProjects(projects);
             setTotalFunding(ethers.utils.formatEther(total));
-        } catch (err) {
+        } catch (err: any) {
             console.error('Failed to load projects:', err);
-            setError('Failed to load your research projects');
+            setError(err?.message || 'Failed to load your research projects');
         } finally {
             setLoading(false);
+            setIsRetrying(false);
         }
     }, [contractInterface, account]);
 
     const loadIPTokens = useCallback(async () => {
         if (!contractInterface || !account) return;
-
+        setLoading(true);
+        setError('');
         try {
             const tokens = await contractInterface.getOwnedTokens(account);
             setOwnedTokens(tokens);
-        } catch (err) {
+        } catch (err: any) {
             console.error('Failed to load IP tokens:', err);
-            setError('Failed to load your IP tokens');
+            if (err?.code === -32603) {
+                setError('Network error. Please check your connection and try again.');
+            } else {
+                setError('Failed to load your IP tokens. Please try again.');
+            }
+        } finally {
+            setLoading(false);
+            setIsRetrying(false);
         }
     }, [contractInterface, account]);
 
@@ -86,6 +101,15 @@ const ResearcherDashboard: React.FC = () => {
     const handleListingCreated = () => {
         loadIPTokens();
     };
+
+    const handleRetry = useCallback(() => {
+        setIsRetrying(true);
+        if (activeTab === DashboardTab.Projects) {
+            loadProjects();
+        } else {
+            loadIPTokens();
+        }
+    }, [activeTab, loadProjects, loadIPTokens]);
 
     if (needsWallet) {
         return (
@@ -240,12 +264,14 @@ const ResearcherDashboard: React.FC = () => {
                     <button
                         className={`tab-button ${activeTab === DashboardTab.Projects ? 'active' : ''}`}
                         onClick={() => setActiveTab(DashboardTab.Projects)}
+                        disabled={loading || isRetrying}
                     >
                         Research Projects
                     </button>
                     <button
                         className={`tab-button ${activeTab === DashboardTab.IP ? 'active' : ''}`}
                         onClick={() => setActiveTab(DashboardTab.IP)}
+                        disabled={loading || isRetrying}
                     >
                         IP Portfolio
                     </button>
@@ -253,9 +279,14 @@ const ResearcherDashboard: React.FC = () => {
             </div>
 
             {loading ? (
-                <div className="loading">Loading...</div>
+                <div className="loading">
+                    {isRetrying ? 'Retrying...' : 'Loading...'}
+                </div>
             ) : error ? (
-                <div className="error">{error}</div>
+                <ErrorDisplay 
+                    message={error}
+                    onRetry={handleRetry}
+                />
             ) : (
                 <div className="dashboard-content">
                     {activeTab === DashboardTab.Projects ? renderProjectsTab() : renderIPTab()}

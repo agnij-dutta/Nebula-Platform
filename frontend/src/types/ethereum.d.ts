@@ -1,3 +1,12 @@
+import { ExternalProvider } from '@ethersproject/providers';
+
+export interface EthereumProvider extends ExternalProvider {
+    isMetaMask?: boolean;
+    request: (args: { method: string; params?: any[] }) => Promise<any>;
+    on: (eventName: string, handler: (...args: any[]) => void) => void;
+    removeListener: (eventName: string, handler: (...args: any[]) => void) => void;
+}
+
 interface RequestArguments {
     method: string;
     params?: any[];
@@ -20,23 +29,9 @@ interface EthereumEvent {
 type EthereumEventKeys = keyof EthereumEvent;
 type EthereumEventHandler<K extends EthereumEventKeys> = (event: EthereumEvent[K]) => void;
 
-interface Ethereum {
-    isMetaMask?: boolean;
-    request: (args: RequestArguments) => Promise<any>;
-    on: <K extends EthereumEventKeys>(event: K, handler: EthereumEventHandler<K>) => void;
-    removeListener: <K extends EthereumEventKeys>(event: K, handler: EthereumEventHandler<K>) => void;
-    addListener: <K extends EthereumEventKeys>(event: K, handler: EthereumEventHandler<K>) => void;
-    removeAllListeners: (event: EthereumEventKeys) => void;
-    autoRefreshOnNetworkChange?: boolean;
-    chainId?: string;
-    networkVersion?: string;
-    selectedAddress?: string | null;
-    isConnected: () => boolean;
-}
-
 declare global {
     interface Window {
-        ethereum?: Ethereum;
+        ethereum?: EthereumProvider;
     }
 }
 

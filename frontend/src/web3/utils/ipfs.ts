@@ -1,20 +1,14 @@
 import { create } from 'ipfs-http-client';
 import { Buffer } from 'buffer';
 
-// Configure IPFS client using environment variables
-const projectId = process.env.REACT_APP_IPFS_PROJECT_ID;
-const projectSecret = process.env.REACT_APP_IPFS_PROJECT_SECRET;
+const INFURA_PROJECT_ID = '549a3becfe064ab59d726f192917646e';
+const INFURA_PROJECT_SECRET = '4zLJi4DX/Kl+Jl2zYo9MknqJjQijpjvppCnJg7z89oyvxhCOIY6fXw';
+const INFURA_ENDPOINT = 'https://avalanche-fuji.infura.io/v3/549a3becfe064ab59d726f192917646e';
 
-if (!projectId || !projectSecret) {
-    console.error('IPFS credentials not found in environment variables');
-}
-
-const auth = 'Basic ' + Buffer.from(`${projectId}:${projectSecret}`).toString('base64');
+const auth = 'Basic ' + Buffer.from(`${INFURA_PROJECT_ID}:${INFURA_PROJECT_SECRET}`).toString('base64');
 
 const client = create({
-    host: process.env.REACT_APP_IPFS_HOST || 'ipfs.infura.io',
-    port: parseInt(process.env.REACT_APP_IPFS_PORT || '5001'),
-    protocol: process.env.REACT_APP_IPFS_PROTOCOL || 'https',
+    url: INFURA_ENDPOINT,
     headers: {
         authorization: auth,
     },
@@ -44,7 +38,7 @@ export const ipfsService = {
     },
 
     getIPFSUrl(cid: string): string {
-        return `${process.env.REACT_APP_IPFS_GATEWAY || 'https://ipfs.io/ipfs/'}${cid}`;
+        return `https://ipfs.io/ipfs/${cid}`;
     }
 };
 

@@ -1,9 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ethers } from 'ethers';
+import { ethers, BigNumber } from 'ethers';
 import { useWeb3 } from '../web3/hooks/useWeb3';
 import { ipfsService } from '../web3/utils/ipfs';
-import { ProjectDetails as IProjectDetails } from '../web3/utils/contracts';
+import { Project, Milestone } from '../types/contracts';
 import MilestoneVerificationStatus from './MilestoneVerificationStatus';
 import WalletPrompt from './WalletPrompt';
 import './ProjectDetails.css';
@@ -21,18 +21,14 @@ const ProjectDetails: React.FC = () => {
     const { id } = useParams<{ id: string }>();
     const navigate = useNavigate();
     const { contractInterface, account, needsWallet, connectWallet } = useWeb3();
-    const [project, setProject] = useState<IProjectDetails | null>(null);
+    const [project, setProject] = useState<Project | null>(null);
     const [metadata, setMetadata] = useState<ProjectMetadata | null>(null);
     const [fundAmount, setFundAmount] = useState('');
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
     const [txPending, setTxPending] = useState(false);
 
-    useEffect(() => {
-        if (id) loadProject();
-    }, [id, contractInterface]);
-
-    const loadProject = async () => {
+    const loadProject = useCallback(async () => {
         if (!contractInterface || !id) return;
 
         try {
@@ -42,7 +38,31 @@ const ProjectDetails: React.FC = () => {
                 return;
             }
 
-            setProject(projectData);
+            // Transform contract data to match Project interface
+            const transformedProject: Project = {
+                projectId: id,
+                title: projectData.title,
+                description: projectData.description,
+                researcher: projectData.researcher,
+                totalFunding: ethers.utils.parseUnits(projectData.totalFunding.split('.')[0], 'ether'),
+                currentFunding: ethers.utils.parseUnits(projectData.currentFunding.split('.')[0], 'ether'),
+                isActive: projectData.isActive,
+                category: projectData.category,
+                createdAt: BigNumber.from(projectData.createdAt || '0'),
+                metadataURI: projectData.metadataURI,
+                isCancelled: Boolean(projectData.isActive === false),
+                deadline: BigNumber.from(projectData.deadline || '0'),
+                milestones: projectData.milestones.map((m: any) => ({
+                    description: m.description,
+                    targetAmount: ethers.utils.parseUnits(m.targetAmount.split('.')[0], 'ether'),
+                    currentAmount: ethers.utils.parseUnits(m.currentAmount.split('.')[0], 'ether'),
+                    isCompleted: m.isCompleted,
+                    fundsReleased: Boolean(m.fundsReleased),
+                    verificationCriteria: m.verificationCriteria || ''
+                }))
+            };
+
+            setProject(transformedProject);
 
             // Load metadata from IPFS
             try {
@@ -59,7 +79,11 @@ const ProjectDetails: React.FC = () => {
         } finally {
             setLoading(false);
         }
-    };
+    }, [contractInterface, id]);
+
+    useEffect(() => {
+        loadProject();
+    }, [loadProject]);
 
     const handleFund = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -183,7 +207,7 @@ const ProjectDetails: React.FC = () => {
 
             <div className="milestones">
                 <h2>Research Milestones</h2>
-                {project.milestones.map((milestone, index) => (
+                {project.milestones.map((milestone: Milestone, index: number) => (
                     <div 
                         key={index} 
                         className={`milestone ${milestone.isCompleted ? 'completed' : ''}`}
@@ -216,11 +240,11 @@ const ProjectDetails: React.FC = () => {
                             </div>
                         </div>
 
-                        {milestone.verificationCID && id && (
+                        {!milestone.fundsReleased && (
                             <MilestoneVerificationStatus
-                                projectId={id}
+                                projectId={id!}
                                 milestoneId={index.toString()}
-                                verificationCID={milestone.verificationCID}
+                                verificationCriteria={milestone.verificationCriteria}
                             />
                         )}
                     </div>

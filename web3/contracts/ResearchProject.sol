@@ -21,7 +21,7 @@ contract ResearchProject is ERC1155, ReentrancyGuard {
         uint256 currentAmount;
         bool isCompleted;
         bool fundsReleased;
-        string verificationCID; // IPFS hash of verification criteria
+        string verificationCriteria; // Changed from verificationCID to store criteria directly
     }
     
     struct Project {
@@ -35,7 +35,7 @@ contract ResearchProject is ERC1155, ReentrancyGuard {
         uint256[] milestoneIds;
         string category;
         uint256 createdAt;
-        string metadataCID; // IPFS hash for extended project details
+        string metadataURI; // Optional: Can be IPFS CID or other URI
         bool isCancelled;
         uint256 deadline;
     }
@@ -52,7 +52,7 @@ contract ResearchProject is ERC1155, ReentrancyGuard {
         address indexed researcher,
         string title,
         string category,
-        string metadataCID
+        string metadataURI
     );
     
     event MilestoneAdded(
@@ -60,7 +60,7 @@ contract ResearchProject is ERC1155, ReentrancyGuard {
         uint256 indexed milestoneId,
         string description,
         uint256 targetAmount,
-        string verificationCID
+        string verificationCriteria
     );
     
     event ProjectFunded(
@@ -101,14 +101,14 @@ contract ResearchProject is ERC1155, ReentrancyGuard {
         string memory title,
         string memory description,
         string memory category,
-        string memory metadataCID,
+        string memory metadataURI,
         string[] memory milestoneDescriptions,
         uint256[] memory milestoneTargets,
-        string[] memory verificationCIDs,
+        string[] memory verificationCriteria,
         uint256 deadline
     ) external nonReentrant returns (uint256) {
         require(milestoneDescriptions.length == milestoneTargets.length, "Mismatched milestone inputs");
-        require(milestoneDescriptions.length == verificationCIDs.length, "Mismatched verification CIDs");
+        require(milestoneDescriptions.length == verificationCriteria.length, "Mismatched verification criteria");
         require(milestoneDescriptions.length > 0, "No milestones provided");
         require(deadline > block.timestamp, "Invalid deadline");
 
@@ -126,11 +126,11 @@ contract ResearchProject is ERC1155, ReentrancyGuard {
                 currentAmount: 0,
                 isCompleted: false,
                 fundsReleased: false,
-                verificationCID: verificationCIDs[i]
+                verificationCriteria: verificationCriteria[i]
             });
             
             totalTarget += milestoneTargets[i];
-            emit MilestoneAdded(projectId, i + 1, milestoneDescriptions[i], milestoneTargets[i], verificationCIDs[i]);
+            emit MilestoneAdded(projectId, i + 1, milestoneDescriptions[i], milestoneTargets[i], verificationCriteria[i]);
         }
 
         projects[projectId] = Project({
@@ -144,7 +144,7 @@ contract ResearchProject is ERC1155, ReentrancyGuard {
             milestoneIds: mIds,
             category: category,
             createdAt: block.timestamp,
-            metadataCID: metadataCID,
+            metadataURI: metadataURI,
             isCancelled: false,
             deadline: deadline
         });
@@ -152,7 +152,7 @@ contract ResearchProject is ERC1155, ReentrancyGuard {
         // Create escrow for the project
         fundingEscrow.createEscrow(projectId);
         
-        emit ProjectCreated(projectId, msg.sender, title, category, metadataCID);
+        emit ProjectCreated(projectId, msg.sender, title, category, metadataURI);
         return projectId;
     }
 
@@ -188,7 +188,7 @@ contract ResearchProject is ERC1155, ReentrancyGuard {
     function verifyAndReleaseFunds(
         uint256 projectId, 
         uint256 milestoneId, 
-        string calldata proofCID
+        string calldata submittedProof
     ) external onlyOracle {
         Project storage project = projects[projectId];
         require(project.isActive, "Project not active");
@@ -198,16 +198,15 @@ contract ResearchProject is ERC1155, ReentrancyGuard {
         require(!milestone.fundsReleased, "Funds already released");
         require(milestone.isCompleted, "Milestone not completed");
         
-        // Verify proof matches the milestone criteria
+        // Oracle validates the proof against the on-chain criteria
         require(
-            keccak256(abi.encodePacked(proofCID)) == 
-            keccak256(abi.encodePacked(milestone.verificationCID)),
-            "Invalid verification proof"
+            keccak256(abi.encodePacked(submittedProof)) == 
+            keccak256(abi.encodePacked(milestone.verificationCriteria)),
+            "Verification failed"
         );
 
         milestone.fundsReleased = true;
         
-        // Release funds through escrow
         fundingEscrow.releaseMilestoneFunds(
             projectId,
             milestoneId,
@@ -228,6 +227,11 @@ contract ResearchProject is ERC1155, ReentrancyGuard {
         emit ProjectCancelled(projectId);
     }
 
+    function setMilestoneOracle(address _oracle) external {
+        require(msg.sender == oracle, "Only current oracle can update");
+        oracle = _oracle;
+    }
+
     // View functions
     function getProject(uint256 projectId) external view returns (
         string memory title,
@@ -238,7 +242,7 @@ contract ResearchProject is ERC1155, ReentrancyGuard {
         bool isActive,
         string memory category,
         uint256 createdAt,
-        string memory metadataCID,
+        string memory metadataURI,
         bool isCancelled,
         uint256 deadline
     ) {
@@ -252,7 +256,7 @@ contract ResearchProject is ERC1155, ReentrancyGuard {
             project.isActive,
             project.category,
             project.createdAt,
-            project.metadataCID,
+            project.metadataURI,
             project.isCancelled,
             project.deadline
         );
@@ -264,7 +268,7 @@ contract ResearchProject is ERC1155, ReentrancyGuard {
         uint256 currentAmount,
         bool isCompleted,
         bool fundsReleased,
-        string memory verificationCID
+        string memory verificationCriteria
     ) {
         Milestone storage milestone = milestones[projectId][milestoneId];
         return (
@@ -273,7 +277,7 @@ contract ResearchProject is ERC1155, ReentrancyGuard {
             milestone.currentAmount,
             milestone.isCompleted,
             milestone.fundsReleased,
-            milestone.verificationCID
+            milestone.verificationCriteria
         );
     }
 

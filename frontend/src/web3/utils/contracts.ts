@@ -94,14 +94,165 @@ interface VerificationRequest {
     customParams?: Record<string, any>;
 }
 
+export class BaseContract {
+    public readonly contract: ethers.Contract;
+    private provider: ethers.providers.Web3Provider;
+    private signer: ethers.Signer;
+    private activeBatches: number = 0;
+
+    constructor(
+        provider: ethers.providers.Web3Provider,
+        address: string,
+        abi: any,
+        signer?: ethers.Signer
+    ) {
+        this.provider = provider;
+        this.signer = signer || provider.getSigner();
+        this.contract = new ethers.Contract(address, abi, this.signer);
+    }
+
+    public async retryOperation<T>(
+        operation: () => Promise<T>,
+        maxRetries: number = WEB3_CONFIG.ETHERS_CONFIG.rpcConfig.maxRetries
+    ): Promise<T> {
+        let lastError: Error | null = null;
+        
+        for (let attempt = 0; attempt <= maxRetries; attempt++) {
+            try {
+                return await operation();
+            } catch (err: any) {
+                lastError = err;
+                if (attempt === maxRetries) break;
+                
+                if (err.code !== -32603 && !err.message?.includes('network')) {
+                    throw err;
+                }
+                
+                await new Promise(resolve => 
+                    setTimeout(resolve, 
+                        WEB3_CONFIG.ETHERS_CONFIG.rpcConfig.customBackoff(attempt)
+                    )
+                );
+            }
+        }
+        
+        throw lastError;
+    }
+
+    public async processBatch<T, R>(
+        items: T[],
+        processor: (item: T) => Promise<R | null>,
+        batchSize: number = WEB3_CONFIG.ETHERS_CONFIG.rpcConfig.batchSize
+    ): Promise<NonNullable<Awaited<R>>[]> {
+        const results: NonNullable<Awaited<R>>[] = [];
+        
+        while (this.activeBatches >= WEB3_CONFIG.ETHERS_CONFIG.rpcConfig.maxConcurrentBatches) {
+            await new Promise(resolve => setTimeout(resolve, 100));
+        }
+        
+        this.activeBatches++;
+        
+        try {
+            for (let i = 0; i < items.length; i += batchSize) {
+                const batch = items.slice(i, i + batchSize);
+                const processWithRetry = async (item: T): Promise<R | null> => {
+                    return this.retryOperation(async () => {
+                        const result = await Promise.race([
+                            processor(item),
+                            new Promise<R | null>((_, reject) => 
+                                setTimeout(
+                                    () => reject(new Error('Batch operation timeout')),
+                                    WEB3_CONFIG.ETHERS_CONFIG.rpcConfig.batchTimeout
+                                )
+                            )
+                        ]);
+                        return result;
+                    });
+                };
+                
+                const batchResults = await Promise.all(batch.map(processWithRetry));
+                const filteredResults = batchResults.filter((r): r is NonNullable<Awaited<R>> => r !== null);
+                results.push(...filteredResults);
+                
+                if (i + batchSize < items.length) {
+                    await new Promise(resolve => 
+                        setTimeout(resolve, WEB3_CONFIG.ETHERS_CONFIG.rpcConfig.retryInterval)
+                    );
+                }
+            }
+            
+            return results;
+        } finally {
+            this.activeBatches--;
+        }
+    }
+
+    public async executeWithGas<T extends ethers.ContractReceipt>(
+        operation: () => Promise<ethers.ContractTransaction>,
+        gasLimitMultiplier: number = WEB3_CONFIG.GAS_LIMIT_MULTIPLIER
+    ): Promise<T> {
+        const tx = await operation();
+        
+        let receipt = null;
+        let retries = WEB3_CONFIG.ETHERS_CONFIG.rpcConfig.maxRetries;
+        
+        while (retries > 0 && !receipt) {
+            try {
+                receipt = await Promise.race([
+                    tx.wait(1),
+                    new Promise<T>((_, reject) => 
+                        setTimeout(
+                            () => reject(new Error('Transaction confirmation timeout')),
+                            WEB3_CONFIG.ETHERS_CONFIG.timeout
+                        )
+                    )
+                ]);
+                break;
+            } catch (err) {
+                console.warn('Waiting for transaction confirmation...', err);
+                retries--;
+                if (retries === 0) throw err;
+                await new Promise(resolve => 
+                    setTimeout(
+                        resolve, 
+                        WEB3_CONFIG.ETHERS_CONFIG.rpcConfig.customBackoff(
+                            WEB3_CONFIG.ETHERS_CONFIG.rpcConfig.maxRetries - retries
+                        )
+                    )
+                );
+            }
+        }
+        
+        return receipt as T;
+    }
+}
+
+// Add retry operation helper
+const retryOperation = async <T,>(
+    operation: () => Promise<T>, 
+    maxRetries: number = 3
+): Promise<T> => {
+    let lastError;
+    for (let i = 0; i < maxRetries; i++) {
+        try {
+            return await operation();
+        } catch (error) {
+            lastError = error;
+            await new Promise(resolve => setTimeout(resolve, Math.pow(2, i) * 1000));
+        }
+    }
+    throw lastError;
+};
+
+// Update ContractInterface to extend BaseContract
 export class ContractInterface {
     private provider: ethers.providers.Web3Provider;
     private signer: ethers.Signer;
+    private contracts: Map<string, BaseContract> = new Map();
     
     constructor(provider: ethers.providers.Web3Provider) {
         const network = ethers.providers.getNetwork(WEB3_CONFIG.NETWORKS.TESTNET.chainId);
         
-        // Create a Web3Provider with the network configuration
         this.provider = new ethers.providers.Web3Provider(
             provider.provider as ethers.providers.ExternalProvider,
             network
@@ -114,24 +265,27 @@ export class ContractInterface {
         return WEB3_CONFIG.CONTRACTS[contractName].address;
     }
 
-    async getIPMarketplace() {
-        return new ethers.Contract(
-            WEB3_CONFIG.CONTRACTS.IPMarketplace.address,
-            IPMarketplaceABI.abi,
-            this.signer
-        );
+    private async getContract(
+        name: keyof typeof WEB3_CONFIG.CONTRACTS,
+        abi: any
+    ): Promise<BaseContract> {
+        if (!this.contracts.has(name)) {
+            const address = this.getContractAddress(name);
+            this.contracts.set(
+                name,
+                new BaseContract(this.provider, address, abi, this.signer)
+            );
+        }
+        return this.contracts.get(name)!;
     }
 
-    getIPMarketplaceAddress() {
-        return WEB3_CONFIG.CONTRACTS.IPMarketplace.address;
+    // Update existing contract getter methods to use the new BaseContract pattern
+    async getIPMarketplace() {
+        return (await this.getContract('IPMarketplace', IPMarketplaceABI.abi)).contract;
     }
 
     async getIPToken() {
-        return new ethers.Contract(
-            WEB3_CONFIG.CONTRACTS.IPToken.address,
-            IPTokenABI.abi,
-            this.signer
-        );
+        return (await this.getContract('IPToken', IPTokenABI.abi)).contract;
     }
 
     async getNEBLToken() {
@@ -171,43 +325,23 @@ export class ContractInterface {
     }
 
     async getResearchProject() {
-        return new ethers.Contract(
-            WEB3_CONFIG.CONTRACTS.ResearchProject.address,
-            ResearchProjectABI.abi,
-            this.signer
-        );
+        return (await this.getContract('ResearchProject', ResearchProjectABI.abi)).contract;
     }
 
     async getGovernance() {
-        return new ethers.Contract(
-            WEB3_CONFIG.CONTRACTS.Governance.address,
-            GovernanceABI.abi,
-            this.signer
-        );
+        return (await this.getContract('Governance', GovernanceABI.abi)).contract;
     }
 
     async getDisputes() {
-        return new ethers.Contract(
-            WEB3_CONFIG.CONTRACTS.Disputes.address,
-            DisputesABI.abi,
-            this.signer
-        );
+        return (await this.getContract('Disputes', DisputesABI.abi)).contract;
     }
 
     async getMilestoneOracle() {
-        return new ethers.Contract(
-            WEB3_CONFIG.CONTRACTS.MilestoneOracle.address,
-            MilestoneOracleABI.abi,
-            this.signer
-        );
+        return (await this.getContract('MilestoneOracle', MilestoneOracleABI.abi)).contract;
     }
 
     async getFundingEscrow() {
-        return new ethers.Contract(
-            WEB3_CONFIG.CONTRACTS.FundingEscrow.address,
-            FundingEscrowABI.abi,
-            this.signer
-        );
+        return (await this.getContract('FundingEscrow', FundingEscrowABI.abi)).contract;
     }
 
     async getActiveListings(startId: number, pageSize: number) {
@@ -280,53 +414,77 @@ export class ContractInterface {
         throw new Error('Failed to get token ID from transaction');
     }
 
+    // Example of using batch processing for token operations
     async getOwnedTokens(address: string): Promise<IPDetails[]> {
-        const ipToken = await this.getIPToken();
-        try {
-            // Use batch request for better performance
-            const filter = ipToken.filters.Transfer(null, address, null);
-            const events = await ipToken.queryFilter(filter);
-            const tokenIds = Array.from(new Set(events.map(e => e.args?.tokenId.toString())));
-            
-            // Initialize tokens array to store results
-            const tokens: IPDetails[] = [];
-            
-            // Process tokens in batches of 5 to avoid rate limiting
-            const batchSize = 5;
-            for (let i = 0; i < tokenIds.length; i += batchSize) {
-                const batch = tokenIds.slice(i, i + batchSize);
-                const batchPromises = batch.map(async tokenId => {
-                    try {
-                        const owner = await ipToken.ownerOf(tokenId);
-                        if (owner.toLowerCase() === address.toLowerCase()) {
-                            const details = await ipToken.ipDetails(tokenId);
-                            return {
-                                tokenId,
-                                title: details.title,
-                                description: details.description,
-                                price: ethers.utils.formatEther(details.price),
-                                isListed: details.isListed,
-                                creator: details.creator,
-                                licenseTerms: details.licenseTerms
-                            };
-                        }
-                    } catch (err) {
-                        console.error(`Error fetching token ${tokenId}:`, err);
-                        return null;
-                    }
-                });
-                
-                const batchResults = await Promise.all(batchPromises);
-                tokens.push(...batchResults.filter((t): t is IPDetails => t !== null));
-                
-                // Add small delay between batches to avoid rate limiting
-                if (i + batchSize < tokenIds.length) {
-                    await new Promise(resolve => setTimeout(resolve, 500));
+        const ipToken = await this.getContract('IPToken', IPTokenABI.abi);
+        
+        const processTokenWithRetry = async (tokenId: string): Promise<IPDetails | null> => {
+            try {
+                const owner = await ipToken.contract.ownerOf(tokenId);
+                if (owner.toLowerCase() === address.toLowerCase()) {
+                    const details = await ipToken.contract.ipDetails(tokenId);
+                    return {
+                        tokenId,
+                        title: details.title,
+                        description: details.description,
+                        price: ethers.utils.formatEther(details.price),
+                        isListed: details.isListed,
+                        creator: details.creator,
+                        licenseTerms: details.licenseTerms
+                    };
                 }
+                return null;
+            } catch (err) {
+                console.warn(`Failed to fetch details for token ${tokenId}:`, err);
+                return null;
             }
-            
-            return tokens;
-        } catch (err: any) {
+        };
+
+        const getTokensWithRetry = async (retryCount = 0, maxRetries = 3): Promise<IPDetails[]> => {
+            try {
+                // First try getting token balance
+                const balance = await ipToken.contract.balanceOf(address);
+                if (balance.isZero()) {
+                    return [];
+                }
+
+                // Then get transfer events
+                const filter = ipToken.contract.filters.Transfer(null, address, null);
+                const events = await ipToken.contract.queryFilter(filter);
+                
+                const tokenIds = Array.from(new Set(
+                    events.map(e => e.args?.tokenId.toString())
+                ));
+
+                // Process tokens in smaller batches
+                const batchSize = 5;
+                const results: IPDetails[] = [];
+                
+                for (let i = 0; i < tokenIds.length; i += batchSize) {
+                    const batch = tokenIds.slice(i, i + batchSize);
+                    const batchResults = await Promise.all(batch.map(processTokenWithRetry));
+                    const validResults = batchResults.filter((result): result is IPDetails => result !== null);
+                    results.push(...validResults);
+                    
+                    if (i + batchSize < tokenIds.length) {
+                        await new Promise(resolve => setTimeout(resolve, 1000));
+                    }
+                }
+
+                return results;
+            } catch (err) {
+                if (retryCount < maxRetries) {
+                    console.warn(`Attempt ${retryCount + 1} failed, retrying...`);
+                    await new Promise(resolve => setTimeout(resolve, Math.pow(2, retryCount) * 1000));
+                    return getTokensWithRetry(retryCount + 1, maxRetries);
+                }
+                throw err;
+            }
+        };
+
+        try {
+            return await getTokensWithRetry();
+        } catch (err) {
             console.error('Failed to fetch owned tokens:', err);
             throw new Error('Failed to load owned tokens. Please try again.');
         }
@@ -390,27 +548,28 @@ export class ContractInterface {
         title: string,
         description: string,
         category: string,
-        metadataCID: string,
+        metadataURI: string,
         milestoneDescriptions: string[],
         milestoneTargets: string[],
-        verificationCIDs: string[],
+        verificationCriteria: string[],
         deadline: number
     ) {
         const researchProject = await this.getResearchProject();
+        
+        // Convert milestone target amounts from ETH to Wei
         const targetsWei = milestoneTargets.map(t => ethers.utils.parseEther(t));
-        const tx = await researchProject.createProject(
+        
+        // Return the transaction first for the caller to wait on
+        return researchProject.createProject(
             title,
             description,
             category,
-            metadataCID,
+            metadataURI,
             milestoneDescriptions,
             targetsWei,
-            verificationCIDs,
+            verificationCriteria,
             deadline
         );
-        const receipt = await tx.wait();
-        const event = receipt.events?.find((e: ethers.Event) => e.event === 'ProjectCreated');
-        return event?.args?.projectId.toString();
     }
 
     async fundProjectMilestone(projectId: string, milestoneId: string, amount: string) {
@@ -473,34 +632,54 @@ export class ContractInterface {
     async getProjectDetails(projectId: string): Promise<ProjectDetails> {
         const researchProject = await this.getResearchProject();
         const project = await researchProject.getProject(projectId);
-        const milestoneIds = (await researchProject.getProject(projectId)).milestoneIds;
         
-        const milestones = await Promise.all(
-            milestoneIds.map(async (id: number) => {
-                const milestone = await researchProject.getMilestone(projectId, id);
-                return {
-                    description: milestone.description,
-                    targetAmount: ethers.utils.formatEther(milestone.targetAmount),
-                    currentAmount: ethers.utils.formatEther(milestone.currentAmount),
-                    isCompleted: milestone.isCompleted,
-                    verificationCID: milestone.verificationCID
-                };
-            })
-        );
+        // Get milestone details by iterating from 1 to total milestones
+        let milestones = [];
+        let milestoneId = 1;
+        let consecutiveErrors = 0;
+        
+        while (consecutiveErrors < 3) { // Stop after 3 consecutive failures
+            try {
+                const milestone = await researchProject.getMilestone(projectId, milestoneId);
+                if (milestone && milestone.description) {
+                    // Remove decimal places before formatting for consistency
+                    const targetAmount = ethers.utils.formatEther(milestone.targetAmount).split('.')[0];
+                    const currentAmount = ethers.utils.formatEther(milestone.currentAmount).split('.')[0];
+                    
+                    milestones.push({
+                        description: milestone.description,
+                        targetAmount,
+                        currentAmount,
+                        isCompleted: milestone.isCompleted,
+                        verificationCID: milestone.verificationCriteria
+                    });
+                    consecutiveErrors = 0; // Reset counter on success
+                } else {
+                    consecutiveErrors++;
+                }
+            } catch (err) {
+                consecutiveErrors++;
+                if (consecutiveErrors >= 3) break;
+            }
+            milestoneId++;
+        }
+
+        const totalFunding = ethers.utils.formatEther(project.totalFunding).split('.')[0];
+        const currentFunding = ethers.utils.formatEther(project.currentFunding).split('.')[0];
 
         return {
             projectId,
             title: project.title,
             description: project.description,
             researcher: project.researcher,
-            totalFunding: ethers.utils.formatEther(project.totalFunding),
-            currentFunding: ethers.utils.formatEther(project.currentFunding),
+            totalFunding,
+            currentFunding,
             isActive: project.isActive,
             category: project.category,
             createdAt: project.createdAt.toNumber(),
             deadline: project.deadline.toNumber(),
             metadataURI: project.metadataURI,
-            milestones
+            milestones: milestones
         };
     }
 
@@ -600,8 +779,10 @@ export class ContractInterface {
         description: string
     ) {
         const governance = await this.getGovernance();
-        const tx = await governance.propose(targets, values, calldatas, description);
-        return tx.wait();
+        return await retryOperation(async () => {
+            const tx = await governance.propose(targets, values, calldatas, description);
+            return tx.wait();
+        });
     }
 
     async castVote(proposalId: string, support: boolean) {
@@ -808,5 +989,9 @@ export class ContractInterface {
             console.error('Error adding token to MetaMask:', error);
             throw error;
         }
+    }
+
+    getIPMarketplaceAddress(): string {
+        return this.getContractAddress('IPMarketplace');
     }
 }

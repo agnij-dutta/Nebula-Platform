@@ -127,9 +127,9 @@ export function useListings(pageSize: number = 10) {
         if (!isNetworkSwitching && contractInterface) {
             refresh();
         }
-    }, [isNetworkSwitching, contractInterface]);
+    }, [isNetworkSwitching, contractInterface, refresh]);
 
-    // Added missing dependency
+    // Initial load
     useEffect(() => {
         refresh();
     }, [refresh]);

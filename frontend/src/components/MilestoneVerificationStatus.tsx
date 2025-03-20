@@ -1,41 +1,30 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useWeb3 } from '../web3/hooks/useWeb3';
-import { ipfsService } from '../web3/utils/ipfs';
+import { VerificationRequest } from '../types/contracts';
 import './MilestoneVerificationStatus.css';
 
 interface Props {
     projectId: string;
     milestoneId: string;
-    verificationCID: string;
-}
-
-interface VerificationCriteria {
-    criteria: string;
-    timestamp: string;
+    verificationCriteria: string;
 }
 
 const MilestoneVerificationStatus: React.FC<Props> = ({ 
     projectId, 
     milestoneId,
-    verificationCID 
+    verificationCriteria
 }) => {
     const { contractInterface } = useWeb3();
-    const [criteria, setCriteria] = useState<string>('');
     const [status, setStatus] = useState<'pending' | 'verified' | 'rejected'>('pending');
     const [loading, setLoading] = useState(true);
     const [verifying, setVerifying] = useState(false);
     const [error, setError] = useState('');
 
-    const loadVerificationDetails = async () => {
+    const loadVerificationDetails = useCallback(async () => {
         if (!contractInterface) return;
 
         try {
-            // Load verification criteria from IPFS
-            const response = await fetch(ipfsService.getIPFSUrl(verificationCID));
-            const data = await response.json() as VerificationCriteria;
-            setCriteria(data.criteria);
-
-            // Get current verification status
+            // Get current verification status from contract
             const verificationReport = await contractInterface.getVerificationDetails(projectId, milestoneId);
             setStatus(
                 verificationReport.status === 'VERIFIED' ? 'verified' :
@@ -48,7 +37,7 @@ const MilestoneVerificationStatus: React.FC<Props> = ({
         } finally {
             setLoading(false);
         }
-    };
+    }, [contractInterface, milestoneId, projectId]);
 
     useEffect(() => {
         loadVerificationDetails();
@@ -61,22 +50,18 @@ const MilestoneVerificationStatus: React.FC<Props> = ({
         setError('');
 
         try {
-            const tx = await contractInterface.requestMilestoneVerification({
+            const request: VerificationRequest = {
                 projectId,
                 milestoneId,
-                proofCID: verificationCID,
-                verificationCID,
+                proofCID: isApproved ? verificationCriteria : 'REJECTED',
+                verificationCID: verificationCriteria,
                 verificationMethods: ['manual'],
                 requiredConfidence: 1,
-                deadline: Math.floor(Date.now() / 1000) + 86400, // 24 hours
-                customParams: {
-                    isApproved
-                }
-            });
-            
+                deadline: Math.floor(Date.now() / 1000) + 86400 // 24 hours
+            };
+
+            const tx = await contractInterface.requestMilestoneVerification(request);
             await tx.wait();
-            
-            // Refresh status
             await loadVerificationDetails();
         } catch (err: any) {
             console.error('Verification failed:', err);
@@ -96,7 +81,7 @@ const MilestoneVerificationStatus: React.FC<Props> = ({
             
             <div className="criteria">
                 <h5>Verification Criteria:</h5>
-                <p>{criteria}</p>
+                <p>{verificationCriteria}</p>
             </div>
 
             <div className="status-info">

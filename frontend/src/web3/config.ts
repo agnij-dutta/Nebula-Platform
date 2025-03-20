@@ -45,7 +45,7 @@ export const WEB3_CONFIG = {
             address: '0x512ade688582F8181047B202EdFacd9043632A03',
         },
         ResearchProject: {
-            address: '0xaaA182881458e309F9e93565f152907e50CF1141',
+            address: '0xE5fa781CA7A6d94dcB571f191c92E5BC8f9f4B41',
         },
         Governance: {
             address: '0x9b9d8D08b75503cCD83d005092c1bfB7e1A0F371',
@@ -56,9 +56,13 @@ export const WEB3_CONFIG = {
         MilestoneOracle: {
             address: '0xe87758C6CCcf3806C9f1f0C8F99f6Dcae36E5449',
         },
+        MilestoneVerification: {
+            address: '0x7dA51954733b2F928A4f279B41B6e5e4490c7D0E',
+        },
         FundingEscrow: {
-            address: '0x4a4366d37B81a6197ef42a76E05C5b66F145154D',
+            address: '0xE328421898E13c9B5401Ec257A5D812C147d7D24',
         }
+
     },
     GAS_LIMIT_MULTIPLIER: 1.2, // Add 20% to estimated gas
     ETHERS_CONFIG: {
@@ -69,7 +73,10 @@ export const WEB3_CONFIG = {
             maxRetries: 3,
             retryInterval: 1000,
             batchSize: 10000, // Maximum blocks to query at once
-            customBackoff: (attempt: number) => Math.min(1000 * Math.pow(2, attempt), 10000)
+            customBackoff: (attempt: number) => Math.min(1000 * Math.pow(2, attempt), 10000),
+            maxConcurrentBatches: 5, // Maximum number of concurrent batch requests
+            batchTimeout: 30000 // 30 seconds timeout for batch operations
         }
     }
 }
+

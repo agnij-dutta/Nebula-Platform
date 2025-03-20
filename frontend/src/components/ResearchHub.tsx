@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
-import { ethers } from 'ethers';
 import { useWeb3 } from '../web3/hooks/useWeb3';
 import { ProjectDetails } from '../web3/utils/contracts';
 import WalletPrompt from './WalletPrompt';
@@ -19,7 +18,7 @@ enum FundingStatus {
 }
 
 const ResearchHub: React.FC = () => {
-  const { contractInterface, account, needsWallet, connectWallet, isConnecting } = useWeb3();
+  const { contractInterface, needsWallet, connectWallet, isConnecting } = useWeb3();
   const [projects, setProjects] = useState<ProjectDetails[]>([]);
   const [sortBy, setSortBy] = useState<SortOption>(SortOption.Trending);
   const [filterStatus, setFilterStatus] = useState<FundingStatus>(FundingStatus.All);
@@ -31,27 +30,25 @@ const ResearchHub: React.FC = () => {
     
     setLoading(true);
     try {
-      // Start with a reasonable upper limit and try to fetch projects until we hit an invalid one
-      const maxPossibleProjects = 100; // Can adjust this based on expected scale
-      const projects = [];
+      let allProjects = [];
+      let projectId = 1;
+      let consecutiveErrors = 0;
 
-      for (let id = 1; id <= maxPossibleProjects; id++) {
+      while (consecutiveErrors < 3) {
         try {
-          const project = await contractInterface.getProjectDetails(id.toString());
+          const project = await contractInterface.getProjectDetails(projectId.toString());
           if (project) {
-            projects.push({
-              ...project,
-              projectId: id.toString()
-            });
+            allProjects.push(project);
+            consecutiveErrors = 0;
+          } else {
+            consecutiveErrors++;
           }
         } catch (err) {
-          // If we get an error, assume we've hit the end of valid projects
-          break;
+          consecutiveErrors++;
         }
+        projectId++;
       }
-      
-      let allProjects = [...projects];
-      
+
       // Apply filters
       if (filterStatus !== FundingStatus.All) {
         allProjects = allProjects.filter(p => 
@@ -64,21 +61,27 @@ const ResearchHub: React.FC = () => {
           p.category.toLowerCase() === selectedCategory.toLowerCase()
         );
       }
-      
+
       // Apply sorting
       switch (sortBy) {
         case SortOption.Newest:
           allProjects.sort((a, b) => b.createdAt - a.createdAt);
           break;
         case SortOption.MostFunded:
-          allProjects.sort((a, b) => 
-            parseFloat(b.currentFunding) - parseFloat(a.currentFunding)
-          );
+          allProjects.sort((a, b) => {
+            const aFunding = parseFloat(a.currentFunding.split('.')[0]);
+            const bFunding = parseFloat(b.currentFunding.split('.')[0]);
+            return bFunding - aFunding;
+          });
           break;
         case SortOption.Trending:
           allProjects.sort((a, b) => {
-            const aProgress = parseFloat(a.currentFunding) / parseFloat(a.totalFunding);
-            const bProgress = parseFloat(b.currentFunding) / parseFloat(b.totalFunding);
+            const aFunding = parseFloat(a.currentFunding.split('.')[0]);
+            const bFunding = parseFloat(b.currentFunding.split('.')[0]);
+            const aTotal = parseFloat(a.totalFunding.split('.')[0]);
+            const bTotal = parseFloat(b.totalFunding.split('.')[0]);
+            const aProgress = aFunding / aTotal;
+            const bProgress = bFunding / bTotal;
             const aAge = (Date.now()/1000 - a.createdAt) / 86400;
             const bAge = (Date.now()/1000 - b.createdAt) / 86400;
             const aScore = aProgress * (1 + 1/Math.sqrt(1 + aAge));
@@ -87,7 +90,7 @@ const ResearchHub: React.FC = () => {
           });
           break;
       }
-      
+
       setProjects(allProjects);
     } catch (err) {
       console.error('Failed to load projects:', err);

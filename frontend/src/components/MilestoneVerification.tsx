@@ -1,20 +1,19 @@
 import React, { useState } from 'react';
 import { useWeb3 } from '../web3/hooks/useWeb3';
 import { useVerification, VerificationStatus } from '../web3/hooks/useVerification';
-import { ipfsService } from '../web3/utils/ipfs';
 import './MilestoneVerification.css';
 
 interface MilestoneVerificationProps {
     projectId: string;
     milestoneId: string;
-    verificationCID: string;
+    verificationCriteria: string;
     onVerificationSubmitted?: () => void;
 }
 
 const MilestoneVerification: React.FC<MilestoneVerificationProps> = ({
     projectId,
     milestoneId,
-    verificationCID,
+    verificationCriteria,
     onVerificationSubmitted
 }) => {
     const { account } = useWeb3();
@@ -22,19 +21,15 @@ const MilestoneVerification: React.FC<MilestoneVerificationProps> = ({
         status,
         requestVerification,
         resetStatus 
-    }: { 
-        status: VerificationStatus;
-        requestVerification: (proofCID: string, verificationCID: string) => Promise<void>;
-        resetStatus: () => void;
     } = useVerification({
         projectId,
         milestoneId
     });
     
-    const [files, setFiles] = useState<File[]>([]);
     const [description, setDescription] = useState('');
     const [metrics, setMetrics] = useState('');
-    const [uploading, setUploading] = useState(false);
+    const [files, setFiles] = useState<File[]>([]);
+    const [submitting, setSubmitting] = useState(false);
 
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         if (e.target.files) {
@@ -44,26 +39,14 @@ const MilestoneVerification: React.FC<MilestoneVerificationProps> = ({
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        setUploading(true);
+        setSubmitting(true);
         try {
-            // Upload proof files to IPFS
-            const fileUploads = await Promise.all(
-                files.map(file => ipfsService.uploadFile(file))
-            );
-            // Create proof metadata
-            const proofMetadata = {
-                description,
-                metrics,
-                proofDocuments: fileUploads,
-                timestamp: new Date().toISOString(),
-                submitter: account,
-                milestoneId,
-                projectId
-            };
-            // Upload proof metadata to IPFS
-            const proofCID = await ipfsService.uploadJSON(proofMetadata);
-            // Request verification through oracle
-            await requestVerification(proofCID, verificationCID);
+            // Create proof data matching verification criteria format
+            const proofData = description + "\n\nMetrics:\n" + metrics;
+            
+            // Request verification with the proof data
+            await requestVerification(proofData, verificationCriteria);
+            
             if (onVerificationSubmitted) {
                 onVerificationSubmitted();
             }
@@ -71,7 +54,7 @@ const MilestoneVerification: React.FC<MilestoneVerificationProps> = ({
             console.error('Verification submission failed:', error);
             resetStatus();
         } finally {
-            setUploading(false);
+            setSubmitting(false);
         }
     };
 
@@ -117,22 +100,21 @@ const MilestoneVerification: React.FC<MilestoneVerificationProps> = ({
                     />
                 </div>
                 <div className="form-group">
-                    <label>Supporting Documents</label>
+                    <label>Supporting Documents (Optional)</label>
                     <input
                         type="file"
                         multiple
                         onChange={handleFileChange}
                         accept=".pdf,.doc,.docx,.txt,.zip,.jpg,.png"
-                        required
                     />
-                    <small>Upload proof of milestone completion (documents, images, data)</small>
+                    <small>Upload any supporting documentation (optional)</small>
                 </div>
                 <button 
                     type="submit" 
                     className="submit-button"
-                    disabled={uploading || isProcessing}
+                    disabled={submitting || isProcessing}
                 >
-                    {uploading ? 'Uploading...' : 'Submit for Verification'}
+                    {submitting ? 'Submitting...' : 'Submit for Verification'}
                 </button>
             </form>
         </div>
