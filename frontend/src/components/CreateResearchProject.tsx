@@ -24,6 +24,26 @@ const CreateResearchProject: React.FC = () => {
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState('');
 
+    const checkTitleUniqueness = async (title: string): Promise<boolean> => {
+        if (!contractInterface) return true;
+        const maxPossibleProjects = 100;
+        
+        for (let projectId = 1; projectId <= maxPossibleProjects; projectId++) {
+            try {
+                const project = await contractInterface.getProjectDetails(projectId.toString());
+                if (project && project.title.toLowerCase() === title.toLowerCase()) {
+                    return false;
+                }
+            } catch (err: any) {
+                if (err?.message?.includes('Project not found')) {
+                    break;
+                }
+                continue;
+            }
+        }
+        return true;
+    };
+
     const handleMilestoneChange = (index: number, field: keyof Milestone, value: string) => {
         const updatedMilestones = [...milestones];
         updatedMilestones[index] = {
@@ -65,6 +85,12 @@ const CreateResearchProject: React.FC = () => {
         setError('');
 
         try {
+            // Check if title is unique
+            const isTitleUnique = await checkTitleUniqueness(title);
+            if (!isTitleUnique) {
+                throw new Error('A project with this title already exists. Please choose a different title.');
+            }
+
             // Validate deadline
             const deadlineDate = new Date(deadline);
             const currentDate = new Date();

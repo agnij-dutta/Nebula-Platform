@@ -32,21 +32,23 @@ const ResearchHub: React.FC = () => {
     try {
       const maxPossibleProjects = 100; // Set a reasonable upper limit
       let allProjects = [];
+      let seenTitles = new Set();
       
       for (let projectId = 1; projectId <= maxPossibleProjects; projectId++) {
         try {
           const project = await contractInterface.getProjectDetails(projectId.toString());
           if (project) {
-            allProjects.push(project);
+            // Only add the project if we haven't seen this title before
+            if (!seenTitles.has(project.title.toLowerCase())) {
+              seenTitles.add(project.title.toLowerCase());
+              allProjects.push(project);
+            }
           }
         } catch (err: any) {
-          // Only break if we get a "Project not found" error
-          // Network errors or other issues should not stop us from trying the next ID
           if (err?.message?.includes('Project not found')) {
             break;
           }
           console.error(`Error loading project ${projectId}:`, err);
-          // Continue to next project if it's a different kind of error
           continue;
         }
       }

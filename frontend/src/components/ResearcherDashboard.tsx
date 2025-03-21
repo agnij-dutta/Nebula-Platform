@@ -40,16 +40,21 @@ const ResearcherDashboard: React.FC = () => {
             const maxPossibleProjects = 100;
             const projects = [];
             let total = ethers.BigNumber.from(0);
+            let seenTitles = new Set();
 
             for (let projectId = 1; projectId <= maxPossibleProjects; projectId++) {
                 try {
                     const project = await contractInterface.getProjectDetails(projectId.toString());
                     if (project && project.researcher.toLowerCase() === account.toLowerCase()) {
-                        projects.push({
-                            ...project,
-                            projectId: projectId.toString()
-                        });
-                        total = total.add(ethers.utils.parseEther(project.currentFunding));
+                        // Only add the project if we haven't seen this title before
+                        if (!seenTitles.has(project.title.toLowerCase())) {
+                            seenTitles.add(project.title.toLowerCase());
+                            projects.push({
+                                ...project,
+                                projectId: projectId.toString()
+                            });
+                            total = total.add(ethers.utils.parseEther(project.currentFunding));
+                        }
                     }
                 } catch (err: any) {
                     // Only break if we get a "Project not found" error
