@@ -30,23 +30,25 @@ const ResearchHub: React.FC = () => {
     
     setLoading(true);
     try {
+      const maxPossibleProjects = 100; // Set a reasonable upper limit
       let allProjects = [];
-      let projectId = 1;
-      let consecutiveErrors = 0;
-
-      while (consecutiveErrors < 3) {
+      
+      for (let projectId = 1; projectId <= maxPossibleProjects; projectId++) {
         try {
           const project = await contractInterface.getProjectDetails(projectId.toString());
           if (project) {
             allProjects.push(project);
-            consecutiveErrors = 0;
-          } else {
-            consecutiveErrors++;
           }
-        } catch (err) {
-          consecutiveErrors++;
+        } catch (err: any) {
+          // Only break if we get a "Project not found" error
+          // Network errors or other issues should not stop us from trying the next ID
+          if (err?.message?.includes('Project not found')) {
+            break;
+          }
+          console.error(`Error loading project ${projectId}:`, err);
+          // Continue to next project if it's a different kind of error
+          continue;
         }
-        projectId++;
       }
 
       // Apply filters
@@ -69,17 +71,17 @@ const ResearchHub: React.FC = () => {
           break;
         case SortOption.MostFunded:
           allProjects.sort((a, b) => {
-            const aFunding = parseFloat(a.currentFunding.split('.')[0]);
-            const bFunding = parseFloat(b.currentFunding.split('.')[0]);
+            const aFunding = parseFloat(a.currentFunding);
+            const bFunding = parseFloat(b.currentFunding);
             return bFunding - aFunding;
           });
           break;
         case SortOption.Trending:
           allProjects.sort((a, b) => {
-            const aFunding = parseFloat(a.currentFunding.split('.')[0]);
-            const bFunding = parseFloat(b.currentFunding.split('.')[0]);
-            const aTotal = parseFloat(a.totalFunding.split('.')[0]);
-            const bTotal = parseFloat(b.totalFunding.split('.')[0]);
+            const aFunding = parseFloat(a.currentFunding);
+            const bFunding = parseFloat(b.currentFunding);
+            const aTotal = parseFloat(a.totalFunding);
+            const bTotal = parseFloat(b.totalFunding);
             const aProgress = aFunding / aTotal;
             const bProgress = bFunding / bTotal;
             const aAge = (Date.now()/1000 - a.createdAt) / 86400;

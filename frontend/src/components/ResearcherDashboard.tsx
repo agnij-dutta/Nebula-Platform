@@ -41,21 +41,27 @@ const ResearcherDashboard: React.FC = () => {
             const projects = [];
             let total = ethers.BigNumber.from(0);
 
-            for (let i = 1; i <= maxPossibleProjects; i++) {
+            for (let projectId = 1; projectId <= maxPossibleProjects; projectId++) {
                 try {
-                    const project = await contractInterface.getProjectDetails(i.toString());
+                    const project = await contractInterface.getProjectDetails(projectId.toString());
                     if (project && project.researcher.toLowerCase() === account.toLowerCase()) {
                         projects.push({
                             ...project,
-                            projectId: i.toString()
+                            projectId: projectId.toString()
                         });
-                        total = total.add(project.currentFunding);
+                        total = total.add(ethers.utils.parseEther(project.currentFunding));
                     }
                 } catch (err: any) {
+                    // Only break if we get a "Project not found" error
+                    if (err?.message?.includes('Project not found')) {
+                        break;
+                    }
+                    console.error(`Error loading project ${projectId}:`, err);
                     if (err?.code === -32603) {
                         throw new Error('Network error. Please check your connection and try again.');
                     }
-                    break;
+                    // Continue to next project if it's a different kind of error
+                    continue;
                 }
             }
 
