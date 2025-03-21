@@ -50,6 +50,14 @@ function getEthereum(): EthereumProvider {
     return window.ethereum as EthereumProvider;
 }
 
+const initializeProvider = (ethereum: EthereumProvider) => {
+    return new ethers.providers.Web3Provider(ethereum as ethers.providers.ExternalProvider, {
+        name: WEB3_CONFIG.NETWORKS.TESTNET.name,
+        chainId: WEB3_CONFIG.NETWORKS.TESTNET.chainId,
+        ensAddress: undefined
+    });
+};
+
 export function useWeb3() {
     const [provider, setProvider] = useState<ethers.providers.Web3Provider | null>(null);
     const [contractInterface, setContractInterface] = useState<ContractInterface | null>(null);
@@ -145,13 +153,7 @@ export function useWeb3() {
             );
             
             if (accounts.length > 0) {
-                const web3Provider = new ethers.providers.Web3Provider(
-                    ethereum as ethers.providers.ExternalProvider,
-                    {
-                        name: WEB3_CONFIG.NETWORKS.TESTNET.name,
-                        chainId: WEB3_CONFIG.NETWORKS.TESTNET.chainId
-                    }
-                );
+                const web3Provider = initializeProvider(ethereum);
 
                 const network = await retryOperation(async () => {
                     const result = await Promise.race([
@@ -163,10 +165,6 @@ export function useWeb3() {
                     ]);
                     return result;
                 });
-
-                if (!network) {
-                    throw new Error('Failed to get network information');
-                }
 
                 setProvider(web3Provider);
                 setContractInterface(new ContractInterface(web3Provider));
@@ -186,6 +184,8 @@ export function useWeb3() {
             resetConnectionState();
             
             const retryInitialization = async (retriesLeft: number): Promise<void> => {
+                if (retriesLeft <= 0) throw err;
+                
                 try {
                     await new Promise(resolve => 
                         setTimeout(resolve, RPC_CONFIG.customBackoff(
@@ -194,15 +194,11 @@ export function useWeb3() {
                     );
                     await initializeWeb3();
                 } catch (retryErr) {
-                    if (retriesLeft > 0) {
-                        await retryInitialization(retriesLeft - 1);
-                    } else {
-                        throw err;
-                    }
+                    await retryInitialization(retriesLeft - 1);
                 }
             };
 
-            if (err.code === -32603) {
+            if (err.code === -32603 || err.message?.includes('network')) {
                 await retryInitialization(RPC_CONFIG.maxRetries);
             }
             throw err;

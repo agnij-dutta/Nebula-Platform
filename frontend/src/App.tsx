@@ -14,6 +14,7 @@ import Staking from './components/Staking';
 import WalletPrompt from './components/WalletPrompt';
 import TokenSwap from './components/TokenSwap';
 import ErrorDisplay from './components/ErrorDisplay';
+import NetworkValidator from './components/NetworkValidator';
 import './App.css';
 import './styles/theme.css';
 
@@ -82,6 +83,7 @@ function App() {
 
     return (
         <Router>
+            <NetworkValidator />
             <div className="space-theme space-scrollbar">
                 <div className="glass-effect">
                     <div className="App">

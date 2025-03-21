@@ -4,7 +4,11 @@ export const WEB3_CONFIG = {
         MAINNET: {
             chainId: 43114,
             name: 'Avalanche Mainnet',
-            rpcUrl: process.env.REACT_APP_AVALANCHE_MAINNET_RPC || 'https://api.avax.network/ext/bc/C/rpc',
+            rpcUrl: [
+                process.env.REACT_APP_AVALANCHE_MAINNET_RPC || 'https://api.avax.network/ext/bc/C/rpc',
+                'https://avalanche-mainnet.infura.io/v3/YOUR-PROJECT-ID',
+                'https://rpc.ankr.com/avalanche'
+            ],
             nativeCurrency: {
                 name: 'AVAX',
                 symbol: 'AVAX',
@@ -15,7 +19,11 @@ export const WEB3_CONFIG = {
         TESTNET: {
             chainId: 43113,
             name: 'Avalanche Fuji Testnet',
-            rpcUrl: process.env.REACT_APP_AVALANCHE_TESTNET_RPC || 'https://api.avax-test.network/ext/bc/C/rpc',
+            rpcUrl: [
+                process.env.REACT_APP_AVALANCHE_TESTNET_RPC || 'https://api.avax-test.network/ext/bc/C/rpc',
+                'https://avalanche-fuji.infura.io/v3/YOUR-PROJECT-ID',
+                'https://rpc.ankr.com/avalanche_fuji'
+            ],
             blockExplorerUrl: 'https://testnet.snowtrace.io',
             nativeCurrency: {
                 name: 'AVAX',
@@ -26,10 +34,11 @@ export const WEB3_CONFIG = {
         }
     },
     CONNECTION_CONFIG: {
-        timeoutMs: 10000, // 10 seconds timeout
-        retryCount: 2,
-        retryDelayMs: 1000,
-        autoConnect: false // Disable auto wallet connection
+        timeoutMs: 15000, // 15 seconds timeout
+        retryCount: 3,
+        retryDelayMs: 2000,
+        autoConnect: false,
+        allowedDomains: ['localhost', 'nebula-platform.vercel.app'] // Add your domains here
     },
     CONTRACTS: {
         IPMarketplace: {
@@ -70,12 +79,17 @@ export const WEB3_CONFIG = {
         timeout: 30000, // 30 seconds transaction timeout
         rpcConfig: {
             allowRetry: true,
-            maxRetries: 3,
-            retryInterval: 1000,
-            batchSize: 10000, // Maximum blocks to query at once
-            customBackoff: (attempt: number) => Math.min(1000 * Math.pow(2, attempt), 10000),
-            maxConcurrentBatches: 5, // Maximum number of concurrent batch requests
-            batchTimeout: 30000 // 30 seconds timeout for batch operations
+            maxRetries: 5,
+            retryInterval: 2000,
+            batchSize: 5000, // Maximum blocks to query at once
+            customBackoff: (attempt: number) => Math.min(2000 * Math.pow(2, attempt), 15000),
+            maxConcurrentBatches: 3, // Maximum number of concurrent batch requests
+            batchTimeout: 30000, // 30 seconds timeout for batch operations
+            headers: {
+                'Access-Control-Allow-Origin': '*',
+                'Access-Control-Allow-Methods': 'GET, POST',
+                'Access-Control-Allow-Headers': 'Content-Type, Authorization'
+            }
         }
     }
 }

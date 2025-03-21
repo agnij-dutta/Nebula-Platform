@@ -107,17 +107,39 @@ export class BaseContract {
     public readonly contract: ethers.Contract;
     private provider: ethers.providers.Web3Provider;
     private signer: ethers.Signer;
+    private fallbackProviders: ethers.providers.JsonRpcProvider[];
     private activeBatches: number = 0;
 
     constructor(
         provider: ethers.providers.Web3Provider,
         address: string,
         abi: any,
-        signer?: ethers.Signer
+        signer?: ethers.Signer,
+        fallbackProviders?: ethers.providers.JsonRpcProvider[]
     ) {
         this.provider = provider;
         this.signer = signer || provider.getSigner();
+        this.fallbackProviders = fallbackProviders || [];
         this.contract = new ethers.Contract(address, abi, this.signer);
+    }
+
+    private async executeWithFallback<T>(operation: () => Promise<T>): Promise<T> {
+        try {
+            return await operation();
+        } catch (err: any) {
+            if ((err.code === 'NETWORK_ERROR' || err.code === -32603 || err.message?.includes('network')) && this.fallbackProviders.length > 0) {
+                // Try each fallback provider
+                for (const provider of this.fallbackProviders) {
+                    try {
+                        const contract = this.contract.connect(provider);
+                        return await operation.call(contract);
+                    } catch (fallbackErr) {
+                        continue;
+                    }
+                }
+            }
+            throw err;
+        }
     }
 
     public async retryOperation<T>(
@@ -128,7 +150,7 @@ export class BaseContract {
         
         for (let attempt = 0; attempt <= maxRetries; attempt++) {
             try {
-                return await operation();
+                return await this.executeWithFallback(operation);
             } catch (err: any) {
                 lastError = err;
                 if (attempt === maxRetries) break;
@@ -256,16 +278,68 @@ export class ContractInterface {
     private provider: ethers.providers.Web3Provider;
     private signer: ethers.Signer;
     private contracts: Map<string, BaseContract> = new Map();
+    private fallbackProviders: ethers.providers.JsonRpcProvider[] = [];
     
     constructor(provider: ethers.providers.Web3Provider) {
-        const network = ethers.providers.getNetwork(WEB3_CONFIG.NETWORKS.TESTNET.chainId);
-        
+        // Initialize main provider with permissive configuration
         this.provider = new ethers.providers.Web3Provider(
             provider.provider as ethers.providers.ExternalProvider,
-            network
+            {
+                name: WEB3_CONFIG.NETWORKS.TESTNET.name,
+                chainId: WEB3_CONFIG.NETWORKS.TESTNET.chainId,
+                ensAddress: undefined
+            }
         );
         
+        // Initialize fallback RPC providers
+        this.initializeFallbackProviders();
+        
         this.signer = this.provider.getSigner();
+    }
+
+    private initializeFallbackProviders() {
+        // Initialize backup RPC providers
+        const rpcUrls = Array.isArray(WEB3_CONFIG.NETWORKS.TESTNET.rpcUrl) 
+            ? WEB3_CONFIG.NETWORKS.TESTNET.rpcUrl 
+            : [WEB3_CONFIG.NETWORKS.TESTNET.rpcUrl];
+
+        this.fallbackProviders = rpcUrls.map(url => 
+            new ethers.providers.JsonRpcProvider(url, {
+                name: WEB3_CONFIG.NETWORKS.TESTNET.name,
+                chainId: WEB3_CONFIG.NETWORKS.TESTNET.chainId,
+                ensAddress: undefined
+            })
+        );
+    }
+
+    private async getFallbackProvider(): Promise<ethers.providers.Provider> {
+        // Try each fallback provider until we find one that works
+        for (const provider of this.fallbackProviders) {
+            try {
+                await provider.getNetwork();
+                return provider;
+            } catch (err) {
+                console.warn('Fallback provider failed:', err);
+                continue;
+            }
+        }
+        throw new Error('All RPC providers failed');
+    }
+
+    private async executeWithFallback<T>(
+        operation: (provider: ethers.providers.Provider) => Promise<T>
+    ): Promise<T> {
+        try {
+            // Try main provider first
+            return await operation(this.provider);
+        } catch (err: any) {
+            if (err.code === 'NETWORK_ERROR' || err.code === -32603 || err.message?.includes('network')) {
+                console.warn('Main provider failed, trying fallbacks');
+                const fallbackProvider = await this.getFallbackProvider();
+                return await operation(fallbackProvider);
+            }
+            throw err;
+        }
     }
 
     private getContractAddress(contractName: keyof typeof WEB3_CONFIG.CONTRACTS): string {
@@ -278,10 +352,17 @@ export class ContractInterface {
     ): Promise<BaseContract> {
         if (!this.contracts.has(name)) {
             const address = this.getContractAddress(name);
-            this.contracts.set(
-                name,
-                new BaseContract(this.provider, address, abi, this.signer)
+            
+            // Create contract with fallback support
+            const contract = new BaseContract(
+                this.provider,
+                address,
+                abi,
+                this.signer,
+                this.fallbackProviders
             );
+            
+            this.contracts.set(name, contract);
         }
         return this.contracts.get(name)!;
     }
