@@ -1,0 +1,17 @@
+# Development
+node_modules
+.env
+.env.local
+.env.*
+*.log
+
+# Project specific directories to ignore
+/elements
+/web3
+/chainlink
+.git
+.github
+*.md
+
+# Allow only frontend build
+!/frontend

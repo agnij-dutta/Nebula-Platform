@@ -1,7 +1,8 @@
 {
   "framework": "create-react-app",
-  "buildCommand": "npm run build",
-  "outputDirectory": "build",
+  "buildCommand": "cd frontend && npm install && npm run build",
+  "outputDirectory": "frontend/build",
+  "installCommand": "cd frontend && npm install",
   "rewrites": [
     { "source": "/(.*)", "destination": "/index.html" }
   ],
@@ -40,5 +41,11 @@
         }
       ]
     }
-  ]
+  ],
+  "ignoreCommand": "git diff --quiet HEAD^ HEAD ./frontend/",
+  "git": {
+    "deploymentEnabled": {
+      "main": true
+    }
+  }
 }
