@@ -185,22 +185,25 @@ export function useWeb3() {
             console.error('Failed to initialize web3:', err);
             resetConnectionState();
             
-            if (err.code === -32603) {
-                let retries = RPC_CONFIG.maxRetries;
-                while (retries > 0) {
-                    try {
-                        await new Promise(resolve => 
-                            setTimeout(resolve, RPC_CONFIG.customBackoff(
-                                RPC_CONFIG.maxRetries - retries
-                            ))
-                        );
-                        await initializeWeb3();
-                        break;
-                    } catch (retryErr) {
-                        retries--;
-                        if (retryErr === 0) throw err;
+            const retryInitialization = async (retriesLeft: number): Promise<void> => {
+                try {
+                    await new Promise(resolve => 
+                        setTimeout(resolve, RPC_CONFIG.customBackoff(
+                            RPC_CONFIG.maxRetries - retriesLeft
+                        ))
+                    );
+                    await initializeWeb3();
+                } catch (retryErr) {
+                    if (retriesLeft > 0) {
+                        await retryInitialization(retriesLeft - 1);
+                    } else {
+                        throw err;
                     }
                 }
+            };
+
+            if (err.code === -32603) {
+                await retryInitialization(RPC_CONFIG.maxRetries);
             }
             throw err;
         }
@@ -376,35 +379,6 @@ export function useWeb3() {
     useEffect(() => {
         clearConnectionLock();
     }, [clearConnectionLock]);
-
-    // Handle transaction retries and errors
-    const handleTransaction = async <T>(
-        operation: () => Promise<T>,
-        maxRetries: number = 3
-    ): Promise<T> => {
-        let currentTry = 0;
-        
-        const tryOperation = async (): Promise<T> => {
-            try {
-                return await operation();
-            } catch (err) {
-                currentTry++;
-                if (currentTry >= maxRetries) throw err;
-                
-                await new Promise(resolve => 
-                    setTimeout(resolve, Math.pow(2, currentTry) * 1000)
-                );
-                return tryOperation();
-            }
-        };
-        
-        return tryOperation();
-    };
-
-    // Replace waitForTransaction with handleTransaction usage where needed
-    const processTransaction = async (tx: ethers.providers.TransactionResponse) => {
-        return handleTransaction(async () => tx.wait(1));
-    };
 
     return {
         provider,

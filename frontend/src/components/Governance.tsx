@@ -34,7 +34,6 @@ const Governance: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [neblBalance, setNeblBalance] = useState('0');
   const [isCreatingProposal, setIsCreatingProposal] = useState(false);
-  const [isVoting, setIsVoting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isRetrying, setIsRetrying] = useState(false);
   const [proposalForm, setProposalForm] = useState({
@@ -47,33 +46,32 @@ const Governance: React.FC = () => {
 
   const loadProposalsInBatches = useCallback(async (governance: any, fromBlock: number, toBlock: number) => {
     const batchSize = WEB3_CONFIG.ETHERS_CONFIG.rpcConfig.batchSize;
-    const events = [];
+    const events: ethers.Event[] = [];
     
+    const retryQueryFilter = async (start: number, end: number, retriesLeft: number): Promise<void> => {
+      try {
+        const batchEvents = await governance.queryFilter(
+          governance.filters.ProposalCreated(),
+          start,
+          end
+        );
+        events.push(...batchEvents);
+      } catch (err) {
+        if (retriesLeft === 0) throw err;
+        await new Promise(resolve => 
+          setTimeout(resolve, 
+            WEB3_CONFIG.ETHERS_CONFIG.rpcConfig.customBackoff(
+              WEB3_CONFIG.ETHERS_CONFIG.rpcConfig.maxRetries - retriesLeft
+            )
+          )
+        );
+        await retryQueryFilter(start, end, retriesLeft - 1);
+      }
+    };
+
     for (let start = fromBlock; start <= toBlock; start += batchSize) {
-        const end = Math.min(start + batchSize - 1, toBlock);
-        let retries = WEB3_CONFIG.ETHERS_CONFIG.rpcConfig.maxRetries;
-        
-        while (retries >= 0) {
-            try {
-                const batchEvents = await governance.queryFilter(
-                    governance.filters.ProposalCreated(),
-                    start,
-                    end
-                );
-                events.push(...batchEvents);
-                break;
-            } catch (err) {
-                if (retries === 0) throw err;
-                retries--;
-                await new Promise(resolve => 
-                    setTimeout(resolve, 
-                        WEB3_CONFIG.ETHERS_CONFIG.rpcConfig.customBackoff(
-                            WEB3_CONFIG.ETHERS_CONFIG.rpcConfig.maxRetries - retries
-                        )
-                    )
-                );
-            }
-        }
+      const end = Math.min(start + batchSize - 1, toBlock);
+      await retryQueryFilter(start, end, WEB3_CONFIG.ETHERS_CONFIG.rpcConfig.maxRetries);
     }
     return events;
   }, []);
@@ -86,39 +84,35 @@ const Governance: React.FC = () => {
     try {
       const governance = await contractInterface.getGovernance();
       const provider = governance.provider;
-
-      // Get latest block with retries
-      let latestBlock = 0;
-      let retries = WEB3_CONFIG.ETHERS_CONFIG.rpcConfig.maxRetries;
       
-      while (retries >= 0) {
-          try {
-              latestBlock = await provider.getBlockNumber();
-              break;
-          } catch (err: any) {
-              if (retries === 0) {
-                  throw new Error('Network error: Failed to get latest block number. Please try again.');
-              }
-              retries--;
-              await new Promise(resolve => 
-                  setTimeout(resolve, 
-                      WEB3_CONFIG.ETHERS_CONFIG.rpcConfig.customBackoff(
-                          WEB3_CONFIG.ETHERS_CONFIG.rpcConfig.maxRetries - retries
-                      )
-                  )
-              );
+      const getLatestBlockWithRetry = async (retriesLeft: number): Promise<number> => {
+        try {
+          return await provider.getBlockNumber();
+        } catch (err) {
+          if (retriesLeft === 0) {
+            throw new Error('Network error: Failed to get latest block number. Please try again.');
           }
-      }
+          await new Promise(resolve => 
+            setTimeout(resolve, 
+              WEB3_CONFIG.ETHERS_CONFIG.rpcConfig.customBackoff(
+                WEB3_CONFIG.ETHERS_CONFIG.rpcConfig.maxRetries - retriesLeft
+              )
+            )
+          );
+          return getLatestBlockWithRetry(retriesLeft - 1);
+        }
+      };
 
-      // Get events in batches with exponential backoff retry
-      const fromBlock = Math.max(0, latestBlock - 100_000); // Last ~2 weeks of blocks
+      const latestBlock = await getLatestBlockWithRetry(WEB3_CONFIG.ETHERS_CONFIG.rpcConfig.maxRetries);
+
+      const fromBlock = Math.max(0, latestBlock - 100_000);
       const events = await loadProposalsInBatches(governance, fromBlock, latestBlock);
 
       const proposalPromises = events.map(async (event) => {
           try {
               const proposalId = event.args?.proposalId.toString();
               const [state, votes] = await Promise.all([
-                  governance.state(proposalId).catch(() => 0), // Default to Pending state on error
+                  governance.state(proposalId).catch(() => 0),
                   governance.proposalVotes(proposalId).catch(() => ({ forVotes: 0, againstVotes: 0 }))
               ]);
 
@@ -201,14 +195,13 @@ const Governance: React.FC = () => {
         )
       ];
 
-      const tx = await contractInterface.createProposal(
+      await contractInterface.createProposal(
         targets,
         values,
         calldatas,
         description
       );
 
-      // Reset form
       setProposalForm({
         title: '',
         description: '',
@@ -232,7 +225,6 @@ const Governance: React.FC = () => {
 
   const handleVote = async (proposalId: string, support: boolean) => {
     if (!contractInterface) return;
-    setIsVoting(true);
     setError(null);
     
     const retryVote = async (currentTry: number, maxRetries: number): Promise<void> => {
@@ -260,8 +252,6 @@ const Governance: React.FC = () => {
       } else {
         setError(err.message || 'Failed to cast vote');
       }
-    } finally {
-      setIsVoting(false);
     }
   };
 

@@ -202,13 +202,10 @@ export class BaseContract {
     ): Promise<T> {
         const tx = await operation();
         
-        let receipt = null;
-        let retries = WEB3_CONFIG.ETHERS_CONFIG.rpcConfig.maxRetries;
-        
-        while (retries > 0 && !receipt) {
+        const waitForReceipt = async (retriesLeft: number): Promise<T> => {
             try {
-                receipt = await Promise.race([
-                    tx.wait(1),
+                const receipt = await Promise.race([
+                    tx.wait(1) as Promise<T>,
                     new Promise<T>((_, reject) => 
                         setTimeout(
                             () => reject(new Error('Transaction confirmation timeout')),
@@ -216,23 +213,24 @@ export class BaseContract {
                         )
                     )
                 ]);
-                break;
+                return receipt;
             } catch (err) {
                 console.warn('Waiting for transaction confirmation...', err);
-                retries--;
-                if (retries === 0) throw err;
+                if (retriesLeft === 0) throw err;
+                
                 await new Promise(resolve => 
                     setTimeout(
                         resolve, 
                         WEB3_CONFIG.ETHERS_CONFIG.rpcConfig.customBackoff(
-                            WEB3_CONFIG.ETHERS_CONFIG.rpcConfig.maxRetries - retries
+                            WEB3_CONFIG.ETHERS_CONFIG.rpcConfig.maxRetries - retriesLeft
                         )
                     )
                 );
+                return waitForReceipt(retriesLeft - 1);
             }
-        }
+        };
         
-        return receipt as T;
+        return waitForReceipt(WEB3_CONFIG.ETHERS_CONFIG.rpcConfig.maxRetries);
     }
 }
 
@@ -451,13 +449,11 @@ export class ContractInterface {
 
         const getTokensWithRetry = async (retryCount = 0, maxRetries = 3): Promise<IPDetails[]> => {
             try {
-                // First try getting token balance
                 const balance = await ipToken.contract.balanceOf(address);
                 if (balance.isZero()) {
                     return [];
                 }
 
-                // Then get transfer events
                 const filter = ipToken.contract.filters.Transfer(null, address, null);
                 const events = await ipToken.contract.queryFilter(filter);
                 
@@ -465,21 +461,24 @@ export class ContractInterface {
                     events.map(e => e.args?.tokenId.toString())
                 ));
 
-                // Process tokens in smaller batches
                 const batchSize = 5;
                 const results: IPDetails[] = [];
                 
+                // Separate the retry logic from the loop
+                const processBatchWithRetry = async (batch: string[]): Promise<IPDetails[]> => {
+                    const batchResults = await Promise.all(batch.map(processTokenWithRetry));
+                    return batchResults.filter((result): result is IPDetails => result !== null);
+                };
+                
                 for (let i = 0; i < tokenIds.length; i += batchSize) {
                     const batch = tokenIds.slice(i, i + batchSize);
-                    const batchResults = await Promise.all(batch.map(processTokenWithRetry));
-                    const validResults = batchResults.filter((result): result is IPDetails => result !== null);
+                    const validResults = await processBatchWithRetry(batch);
                     results.push(...validResults);
                     
                     if (i + batchSize < tokenIds.length) {
                         await new Promise(resolve => setTimeout(resolve, 1000));
                     }
                 }
-
                 return results;
             } catch (err) {
                 if (retryCount < maxRetries) {
@@ -490,7 +489,7 @@ export class ContractInterface {
                 throw err;
             }
         };
-
+        
         try {
             return await getTokensWithRetry();
         } catch (err) {
