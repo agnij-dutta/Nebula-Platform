@@ -34,6 +34,7 @@ function App() {
     const [createdTokenId, setCreatedTokenId] = useState<string | null>(null);
     const [globalError, setGlobalError] = useState<string | null>(null);
     const [isRetrying, setIsRetrying] = useState(false);
+    const [showDisconnect, setShowDisconnect] = useState(false);
     
     const isWrongNetwork = chainId && chainId !== WEB3_CONFIG.NETWORKS.TESTNET.chainId;
 
@@ -91,12 +92,20 @@ function App() {
                             <div className="logo">Nebula Platform</div>
                             <div className="wallet-section">
                                 <div className="wallet-controls">
-                                    <span className="address">
-                                        {account.slice(0, 6)}...{account.slice(-4)}
-                                    </span>
-                                    <button onClick={disconnectWallet} className="disconnect-button">
-                                        Disconnect
-                                    </button>
+                                    <div
+                                        className={`address-container ${showDisconnect ? 'hover' : ''}`}
+                                        onMouseEnter={() => setShowDisconnect(true)}
+                                        onMouseLeave={() => setShowDisconnect(false)}
+                                    >
+                                        <span className="address">
+                                            {showDisconnect ? 'Disconnect' : `${account.slice(0, 6)}...${account.slice(-4)}`}
+                                        </span>
+                                        {showDisconnect && (
+                                            <button onClick={disconnectWallet} className="disconnect-button">
+                                                Disconnect
+                                            </button>
+                                        )}
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -165,13 +174,20 @@ function App() {
                                         </button>
                                     ) : (
                                         <div className="wallet-controls">
-                                            <span className="address">
-                                                <span className="network-indicator"></span>
-                                                {account.slice(0, 6)}...{account.slice(-4)}
-                                            </span>
-                                            <button onClick={disconnectWallet} className="disconnect-button">
-                                                Disconnect
-                                            </button>
+                                            <div
+                                                className={`address-container ${showDisconnect ? 'hover' : ''}`}
+                                                onMouseEnter={() => setShowDisconnect(true)}
+                                                onMouseLeave={() => setShowDisconnect(false)}
+                                            >
+                                                <span className="address">
+                                                    {showDisconnect ? 'Disconnect' : `${account.slice(0, 6)}...${account.slice(-4)}`}
+                                                </span>
+                                                {showDisconnect && (
+                                                    <button onClick={disconnectWallet} className="disconnect-button">
+                                                        Disconnect
+                                                    </button>
+                                                )}
+                                            </div>
                                         </div>
                                     )}
                                 </div>
