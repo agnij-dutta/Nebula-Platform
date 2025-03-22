@@ -20,15 +20,24 @@ const WalletPrompt: React.FC<WalletPromptProps> = ({
     
     // Combined loading state
     const isInProgress = isLoading || isNetworkSwitching || isConnecting;
+    const isMetaMaskInstalled = typeof window !== 'undefined' && !!window.ethereum?.isMetaMask;
 
-    // Reset connecting state if loading state changes
     useEffect(() => {
         if (!isLoading && !isNetworkSwitching && isConnecting) {
             setIsConnecting(false);
         }
     }, [isLoading, isNetworkSwitching, isConnecting]);
 
+    const openMetaMaskInstall = () => {
+        window.open('https://metamask.io/download.html', '_blank');
+    };
+
     const handleConnect = useCallback(async () => {
+        if (!isMetaMaskInstalled) {
+            openMetaMaskInstall();
+            return;
+        }
+
         if (isInProgress) {
             return;
         }
@@ -37,30 +46,26 @@ const WalletPrompt: React.FC<WalletPromptProps> = ({
         setIsConnecting(true);
         
         try {
-            if (!window.ethereum?.isMetaMask) {
-                throw new Error('MetaMask is not installed');
-            }
-
             await onConnect();
         } catch (err: any) {
             console.error('Connection error:', err);
             
             if (err.message?.includes('already pending') || err.message?.includes('already in progress')) {
                 setError('Please check MetaMask for pending connection requests');
-                // Keep the connecting state while there's a pending request
                 return;
+            } else if (err.message?.includes('rejected')) {
+                setError('Connection rejected. Please try again.');
             } else {
                 setError(err.message || 'Failed to connect wallet. Please try again.');
             }
         } finally {
-            // Only reset connecting state if there's no pending request error
             if (!error?.includes('already pending') && !error?.includes('already in progress')) {
                 setIsConnecting(false);
             }
         }
-    }, [isInProgress, onConnect, error]);
+    }, [isInProgress, onConnect, error, isMetaMaskInstalled]);
 
-    // Add effect to reset error state
+    // Reset error after 5 seconds for pending requests
     useEffect(() => {
         let errorTimeout: NodeJS.Timeout;
         if (error && (error.includes('already pending') || error.includes('already in progress'))) {
@@ -76,12 +81,6 @@ const WalletPrompt: React.FC<WalletPromptProps> = ({
         };
     }, [error]);
 
-    const openMetaMaskInstall = () => {
-        window.open('https://metamask.io/download.html', '_blank');
-    };
-
-    const isMetaMaskInstalled = typeof window !== 'undefined' && !!window.ethereum?.isMetaMask;
-
     return (
         <div className="wallet-prompt">
             <div className="wallet-prompt-content">
@@ -95,21 +94,25 @@ const WalletPrompt: React.FC<WalletPromptProps> = ({
                 
                 <h3>{message}</h3>
                 
+                {!isMetaMaskInstalled && (
+                    <div className="install-prompt">
+                        <p>MetaMask is required to use the Nebula Platform</p>
+                        <p className="install-description">
+                            MetaMask is a secure wallet that helps you interact with Web3 applications.
+                        </p>
+                    </div>
+                )}
+                
                 {error && (
                     <div className="error-message">
                         {error}
-                        {!isMetaMaskInstalled && (
-                            <button onClick={openMetaMaskInstall} className="install-button">
-                                Install MetaMask
-                            </button>
-                        )}
                     </div>
                 )}
                 
                 <button 
                     onClick={handleConnect} 
                     className={`connect-button ${isInProgress ? 'loading' : ''}`}
-                    disabled={isInProgress || !isMetaMaskInstalled}
+                    disabled={isInProgress}
                 >
                     {isNetworkSwitching 
                         ? 'Switching Network...'
@@ -122,7 +125,14 @@ const WalletPrompt: React.FC<WalletPromptProps> = ({
 
                 <div className="network-info">
                     <div className="title">Required Network</div>
-                    <div className="network-name">{WEB3_CONFIG.NETWORKS.TESTNET.name}</div>
+                    <div className="network-name">
+                        {WEB3_CONFIG.NETWORKS.TESTNET.name}
+                        <div className="network-details">
+                            <div>Chain ID: {WEB3_CONFIG.NETWORKS.TESTNET.chainId}</div>
+                            <div>Currency: {WEB3_CONFIG.NETWORKS.TESTNET.nativeCurrency.symbol}</div>
+                            <div>RPC: {WEB3_CONFIG.NETWORKS.TESTNET.rpcUrl[0]}</div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>

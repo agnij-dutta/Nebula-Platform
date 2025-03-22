@@ -181,6 +181,29 @@
     margin: 0;
 }
 
+.network-error-banner {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    background: rgba(239, 68, 68, 0.95);
+    color: white;
+    padding: 1rem;
+    text-align: center;
+    z-index: 1000;
+    backdrop-filter: blur(4px);
+    animation: slideDown 0.3s ease-out;
+}
+
+.manual-switch-prompt {
+    font-size: 0.875rem;
+    margin-top: 0.5rem;
+    padding: 0.5rem;
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 4px;
+    display: inline-block;
+}
+
 @keyframes fadeIn {
     from { opacity: 0; }
     to { opacity: 1; }
@@ -210,6 +233,15 @@
 
 @keyframes spin {
     to { transform: translate(-50%, -50%) rotate(360deg); }
+}
+
+@keyframes slideDown {
+    from {
+        transform: translateY(-100%);
+    }
+    to {
+        transform: translateY(0);
+    }
 }
 
 @media (max-width: 640px) {

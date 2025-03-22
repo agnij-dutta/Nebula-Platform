@@ -1,10 +1,13 @@
 import React, { useEffect, useState } from 'react';
 import { useWeb3 } from '../web3/hooks/useWeb3';
 import { WEB3_CONFIG } from '../web3/config';
+import './NetworkSwitchOverlay.css';
 
 const NetworkValidator: React.FC = () => {
     const { provider, chainId, error, switchToFujiTestnet } = useWeb3();
     const [isValidating, setIsValidating] = useState(false);
+    const [validationAttempts, setValidationAttempts] = useState(0);
+    const MAX_AUTO_SWITCH_ATTEMPTS = 3;
 
     useEffect(() => {
         const validateNetwork = async () => {
@@ -24,9 +27,15 @@ const NetworkValidator: React.FC = () => {
                     console.warn('Domain not in allowlist:', currentDomain);
                 }
 
-                // Auto switch network if needed
-                if (network.chainId !== WEB3_CONFIG.NETWORKS.TESTNET.chainId) {
-                    await switchToFujiTestnet();
+                // Auto switch network if needed and under max attempts
+                if (network.chainId !== WEB3_CONFIG.NETWORKS.TESTNET.chainId && 
+                    validationAttempts < MAX_AUTO_SWITCH_ATTEMPTS) {
+                    try {
+                        await switchToFujiTestnet();
+                        setValidationAttempts(prev => prev + 1);
+                    } catch (err) {
+                        console.error('Auto network switch failed:', err);
+                    }
                 }
             } catch (err) {
                 console.error('Network validation failed:', err);
@@ -36,12 +45,24 @@ const NetworkValidator: React.FC = () => {
         };
 
         validateNetwork();
-    }, [provider, chainId, switchToFujiTestnet, isValidating]);
+    }, [provider, chainId, switchToFujiTestnet, isValidating, validationAttempts]);
+
+    // Reset validation attempts when network is correct
+    useEffect(() => {
+        if (chainId === WEB3_CONFIG.NETWORKS.TESTNET.chainId) {
+            setValidationAttempts(0);
+        }
+    }, [chainId]);
 
     if (error) {
         return (
             <div className="network-error-banner">
                 {error}
+                {validationAttempts >= MAX_AUTO_SWITCH_ATTEMPTS && (
+                    <div className="manual-switch-prompt">
+                        Please switch to {WEB3_CONFIG.NETWORKS.TESTNET.name} manually in your wallet
+                    </div>
+                )}
             </div>
         );
     }

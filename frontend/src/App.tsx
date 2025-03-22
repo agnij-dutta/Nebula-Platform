@@ -59,8 +59,8 @@ function App() {
         }
     }, [switchToFujiTestnet]);
 
-    // Show global wallet prompt if no wallet is connected
-    if (needsWallet) {
+    // Early return if wallet not connected or wrong network
+    if (needsWallet || !account) {
         return (
             <Router>
                 <div className="App wallet-not-connected">
@@ -74,6 +74,39 @@ function App() {
                             message="Welcome to Nebula Platform! Connect your wallet to get started"
                             onConnect={connectWallet}
                             isLoading={isConnecting}
+                        />
+                    </main>
+                </div>
+            </Router>
+        );
+    }
+
+    // Show network switch prompt if wrong network
+    if (isWrongNetwork) {
+        return (
+            <Router>
+                <div className="App network-switch-required">
+                    <header className="App-header minimal">
+                        <div className="header-content">
+                            <div className="logo">Nebula Platform</div>
+                            <div className="wallet-section">
+                                <div className="wallet-controls">
+                                    <span className="address">
+                                        {account.slice(0, 6)}...{account.slice(-4)}
+                                    </span>
+                                    <button onClick={disconnectWallet} className="disconnect-button">
+                                        Disconnect
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </header>
+                    <main className="App-content">
+                        <WalletPrompt 
+                            message={`Please switch to ${WEB3_CONFIG.NETWORKS.TESTNET.name} to continue`}
+                            onConnect={switchToFujiTestnet}
+                            isNetworkSwitching={isNetworkSwitching || isRetrying}
+                            isLoading={isNetworkSwitching || isRetrying}
                         />
                     </main>
                 </div>
