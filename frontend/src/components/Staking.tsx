@@ -89,8 +89,25 @@ const Staking: React.FC = () => {
     }
   };
 
+  const isStakeLocked = useCallback(() => {
+    if (!stakeInfo) return false;
+    const currentTime = Math.floor(Date.now() / 1000);
+    return currentTime < stakeInfo.timestamp + stakeInfo.lockPeriod;
+  }, [stakeInfo]);
+
+  const getUnlockDate = useCallback(() => {
+    if (!stakeInfo) return null;
+    return new Date((stakeInfo.timestamp + stakeInfo.lockPeriod) * 1000);
+  }, [stakeInfo]);
+
   const handleUnstake = async () => {
     if (!contractInterface || !account) return;
+
+    if (isStakeLocked()) {
+      const unlockDate = getUnlockDate();
+      setError(`Your stake is still locked until ${unlockDate?.toLocaleString()}. Please wait until the lock period expires.`);
+      return;
+    }
 
     setTxPending(true);
     setError('');
@@ -101,7 +118,13 @@ const Staking: React.FC = () => {
       await loadNeblBalance();
     } catch (err: any) {
       console.error('Unstaking failed:', err);
-      setError(err.message || 'Failed to unstake NEBL');
+      // Make the error message more user-friendly
+      if (err.message?.includes('Stake still locked')) {
+        const unlockDate = getUnlockDate();
+        setError(`Your stake is still locked until ${unlockDate?.toLocaleString()}. Please wait until the lock period expires.`);
+      } else {
+        setError(err.message || 'Failed to unstake NEBL');
+      }
     } finally {
       setTxPending(false);
     }
@@ -157,12 +180,19 @@ const Staking: React.FC = () => {
                 <span>Stake Date:</span>
                 <span>{new Date(stakeInfo.timestamp * 1000).toLocaleDateString()}</span>
               </div>
+              <div className="info-row">
+                <span>Lock Status:</span>
+                <span>{isStakeLocked() ? 
+                  `Locked until ${getUnlockDate()?.toLocaleString()}` : 
+                  'Unlocked - Ready to unstake'}</span>
+              </div>
               <button 
                 className="unstake-button"
                 onClick={handleUnstake}
-                disabled={txPending}
+                disabled={txPending || isStakeLocked()}
               >
-                {txPending ? 'Processing...' : 'Unstake'}
+                {txPending ? 'Processing...' : isStakeLocked() ? 
+                  'Locked' : 'Unstake'}
               </button>
             </div>
           ) : (
