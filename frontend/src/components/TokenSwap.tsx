@@ -131,42 +131,63 @@ const TokenSwap = () => {
 
     return (
         <div className={`token-swap ${loading ? 'loading' : ''}`}>
-            <h1>Swap AVAX for NEBL</h1>
-            
-            <div className={`balance-info ${isNetworkSwitching ? 'updating' : ''}`}>
-                <p>Your NEBL Balance: {neblBalance} NEBL</p>
-                {isNetworkSwitching && <div className="loading-spinner"></div>}
-            </div>
+            <div className="swap-animation">
+                <h1>Swap AVAX for NEBL</h1>
+                
+                <div className={`network-status ${isWrongNetwork ? 'wrong-network' : ''}`}>
+                    <div className={`network-indicator ${isWrongNetwork ? 'wrong-network' : 'connected'}`}></div>
+                    <span>
+                        {isWrongNetwork ? 'Please switch to Fuji Testnet' : 'Connected to Fuji Testnet'}
+                    </span>
+                </div>
 
-            {error && <div className="error">{error}</div>}
-            {success && <div className="success">Swap completed successfully!</div>}
-            
-            <form onSubmit={handleSwap} className="swap-form">
-                <div className="input-group">
-                    <label>AVAX Amount</label>
-                    <input
-                        type="text"
-                        value={avaxAmount}
-                        onChange={handleAmountChange}
-                        placeholder="Enter AVAX amount"
-                        disabled={isWrongNetwork || loading || isNetworkSwitching}
-                    />
+                <div className={`balance-info ${isNetworkSwitching ? 'updating' : ''}`}>
+                    <p>Your NEBL Balance: {parseFloat(neblBalance).toFixed(4)} NEBL</p>
+                    {isNetworkSwitching && <div className="loading-spinner"></div>}
                 </div>
+
+                {error && <div className="error">{error}</div>}
+                {success && (
+                    <div className="success">
+                        Swap completed successfully! Your NEBL balance will update shortly.
+                    </div>
+                )}
                 
-                <div className="expected-return">
-                    Expected NEBL: {expectedNebl}
-                </div>
-                
-                <button 
-                    type="submit" 
-                    disabled={loading || !avaxAmount || isWrongNetwork || isNetworkSwitching}
-                >
-                    {loading ? 'Processing...' : 
-                     isWrongNetwork ? 'Wrong Network' :
-                     isNetworkSwitching ? 'Switching Network...' : 
-                     'Swap'}
-                </button>
-            </form>
+                <form onSubmit={handleSwap} className="swap-form">
+                    <div className="input-group">
+                        <label>AVAX Amount</label>
+                        <input
+                            type="text"
+                            value={avaxAmount}
+                            onChange={handleAmountChange}
+                            placeholder="Enter AVAX amount"
+                            disabled={isWrongNetwork || loading || isNetworkSwitching}
+                            aria-label="AVAX amount to swap"
+                        />
+                    </div>
+                    
+                    <div className="expected-return" role="status" aria-live="polite">
+                        Expected NEBL: {parseFloat(expectedNebl).toFixed(4)}
+                    </div>
+                    
+                    <button 
+                        type="submit" 
+                        disabled={loading || !avaxAmount || isWrongNetwork || isNetworkSwitching}
+                        aria-busy={loading}
+                    >
+                        {loading ? 'Processing...' : 
+                         isWrongNetwork ? 'Wrong Network' :
+                         isNetworkSwitching ? 'Switching Network...' : 
+                         'Swap AVAX for NEBL'}
+                    </button>
+                </form>
+
+                {loading && (
+                    <div className="loading-overlay" role="alert" aria-busy="true">
+                        <div className="loading-spinner"></div>
+                    </div>
+                )}
+            </div>
         </div>
     );
 };
