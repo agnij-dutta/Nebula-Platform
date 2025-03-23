@@ -14,6 +14,12 @@ const client = create({
     },
 });
 
+const IPFS_GATEWAYS = [
+    'https://gateway.ipfs.io',
+    'https://cloudflare-ipfs.com',
+    'https://ipfs.io'
+];
+
 export const ipfsService = {
     async uploadFile(file: File): Promise<string> {
         try {
@@ -38,7 +44,23 @@ export const ipfsService = {
     },
 
     getIPFSUrl(cid: string): string {
-        return `https://ipfs.io/ipfs/${cid}`;
+        // Try multiple gateways to avoid CORS issues
+        const gateway = IPFS_GATEWAYS[Math.floor(Math.random() * IPFS_GATEWAYS.length)];
+        return `${gateway}/ipfs/${cid}`;
+    },
+
+    async fetchIPFSContent(cid: string): Promise<any> {
+        const corsProxy = 'https://api.allorigins.win/raw?url=';
+        const ipfsUrl = this.getIPFSUrl(cid);
+
+        try {
+            const response = await fetch(`${corsProxy}${encodeURIComponent(ipfsUrl)}`);
+            if (!response.ok) throw new Error('Failed to fetch from IPFS');
+            return await response.json();
+        } catch (error) {
+            console.error('IPFS fetch error:', error);
+            throw error;
+        }
     }
 };
 

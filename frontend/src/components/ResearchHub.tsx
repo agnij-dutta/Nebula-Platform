@@ -18,7 +18,7 @@ enum FundingStatus {
 }
 
 const ResearchHub: React.FC = () => {
-  const { contractInterface, needsWallet, connectWallet, isConnecting } = useWeb3();
+  const { contractInterface, account, needsWallet, connectWallet, isConnecting } = useWeb3();
   const [projects, setProjects] = useState<ProjectDetails[]>([]);
   const [sortBy, setSortBy] = useState<SortOption>(SortOption.Trending);
   const [filterStatus, setFilterStatus] = useState<FundingStatus>(FundingStatus.All);
@@ -38,7 +38,6 @@ const ResearchHub: React.FC = () => {
         try {
           const project = await contractInterface.getProjectDetails(projectId.toString());
           if (project) {
-            // Only add the project if we haven't seen this title before
             if (!seenTitles.has(project.title.toLowerCase())) {
               seenTitles.add(project.title.toLowerCase());
               allProjects.push(project);
@@ -125,7 +124,7 @@ const ResearchHub: React.FC = () => {
           <div className="filters">
             <select 
               value={selectedCategory} 
-              onChange={e => setSelectedCategory(e.target.value)}
+              onChange={(e) => setSelectedCategory(e.target.value)}
             >
               <option value="all">All Categories</option>
               <option value="biotech">Biotechnology</option>
@@ -135,19 +134,19 @@ const ResearchHub: React.FC = () => {
               <option value="physics">Physics</option>
               <option value="other">Other</option>
             </select>
-            
+
             <select 
               value={filterStatus} 
-              onChange={e => setFilterStatus(Number(e.target.value))}
+              onChange={(e) => setFilterStatus(Number(e.target.value))}
             >
-              <option value={FundingStatus.All}>All Projects</option>
+              <option value={FundingStatus.All}>All Status</option>
               <option value={FundingStatus.Active}>Active</option>
               <option value={FundingStatus.Completed}>Completed</option>
             </select>
-            
+
             <select 
               value={sortBy} 
-              onChange={e => setSortBy(Number(e.target.value))}
+              onChange={(e) => setSortBy(Number(e.target.value))}
             >
               <option value={SortOption.Trending}>Trending</option>
               <option value={SortOption.Newest}>Newest</option>
@@ -165,28 +164,31 @@ const ResearchHub: React.FC = () => {
         <div className="loading">Loading projects...</div>
       ) : (
         <div className="projects-grid">
-          {projects.map(project => (
-            <div key={project.projectId} className="project-card">
-              <div className="project-header">
-                <h3>{project.title}</h3>
-                <span className="category-tag">{project.category}</span>
-              </div>
-              
-              <p className="description">{project.description}</p>
-              
-              <div className="project-stats">
-                <div className="funding-progress">
-                  <div className="progress-bar">
-                    <div 
-                      className="progress" 
-                      style={{ 
-                        width: `${(parseFloat(project.currentFunding) / parseFloat(project.totalFunding)) * 100}%` 
-                      }}
-                    />
-                  </div>
-                  <div className="funding-info">
-                    <span>{parseFloat(project.currentFunding).toFixed(2)} AVAX raised</span>
-                    <span>Goal: {parseFloat(project.totalFunding).toFixed(2)} AVAX</span>
+          {projects.map(project => {
+            const isOwner = account && account.toLowerCase() === project.researcher.toLowerCase();
+            const progressPercentage = (parseFloat(project.currentFunding) / parseFloat(project.totalFunding)) * 100;
+            
+            return (
+              <div key={project.projectId} className="project-card">
+                <div className="project-header">
+                  <h3>{project.title}</h3>
+                  <span className="category-tag">{project.category}</span>
+                </div>
+                
+                <p className="description">{project.description}</p>
+                
+                <div className="project-stats">
+                  <div className="funding-progress">
+                    <div className="progress-bar">
+                      <div 
+                        className="progress" 
+                        style={{ width: `${progressPercentage}%` }}
+                      />
+                    </div>
+                    <div className="funding-info">
+                      <span>{parseFloat(project.currentFunding).toFixed(2)} AVAX raised</span>
+                      <span>Goal: {parseFloat(project.totalFunding).toFixed(2)} AVAX</span>
+                    </div>
                   </div>
                 </div>
                 
@@ -195,19 +197,30 @@ const ResearchHub: React.FC = () => {
                     By: {project.researcher.slice(0, 6)}...{project.researcher.slice(-4)}
                   </span>
                   <span className="deadline">
-                    {new Date(project.deadline * 1000).toLocaleDateString()}
+                    Deadline: {new Date(project.deadline * 1000).toLocaleDateString()}
                   </span>
                 </div>
-              </div>
 
-              <Link 
-                to={`/project/${project.projectId}`} 
-                className="view-details"
-              >
-                View Details
-              </Link>
-            </div>
-          ))}
+                <div className="card-actions">
+                  <Link 
+                    to={`/project/${project.projectId}`} 
+                    className="view-details"
+                  >
+                    View Details
+                  </Link>
+                  
+                  {project.isActive && !isOwner && (
+                    <Link 
+                      to={`/project/${project.projectId}`} 
+                      className="fund-project"
+                    >
+                      Fund Project
+                    </Link>
+                  )}
+                </div>
+              </div>
+            );
+          })}
           
           {projects.length === 0 && !loading && (
             <div className="no-projects">

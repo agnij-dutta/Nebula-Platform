@@ -24,21 +24,20 @@ const ProjectDetails: React.FC = () => {
     const [project, setProject] = useState<Project | null>(null);
     const [metadata, setMetadata] = useState<ProjectMetadata | null>(null);
     const [fundAmount, setFundAmount] = useState('');
+    const [selectedMilestone, setSelectedMilestone] = useState<number>(0);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
     const [txPending, setTxPending] = useState(false);
 
     const loadProject = useCallback(async () => {
         if (!contractInterface || !id) return;
+        
+        setLoading(true);
+        setError('');
 
         try {
             const projectData = await contractInterface.getProjectDetails(id);
-            if (!projectData) {
-                setError('Project not found');
-                return;
-            }
-
-            // Transform contract data to match Project interface
+            
             const transformedProject: Project = {
                 projectId: id,
                 title: projectData.title,
@@ -64,18 +63,41 @@ const ProjectDetails: React.FC = () => {
 
             setProject(transformedProject);
 
-            // Load metadata from IPFS
-            try {
-                const response = await fetch(ipfsService.getIPFSUrl(projectData.metadataURI));
-                const metadata = await response.json();
-                setMetadata(metadata);
-            } catch (err) {
-                console.error('Failed to load project metadata:', err);
+            // Load metadata from IPFS with fallback to on-chain data
+            if (projectData.metadataURI) {
+                try {
+                    const metadata = await ipfsService.fetchIPFSContent(projectData.metadataURI);
+                    setMetadata(metadata);
+                } catch (err) {
+                    console.warn('Failed to load IPFS metadata, using fallback:', err);
+                    setMetadata({
+                        title: projectData.title,
+                        description: projectData.description,
+                        category: projectData.category,
+                        files: [],
+                        createdAt: new Date(projectData.createdAt * 1000).toISOString(),
+                        creator: projectData.researcher
+                    });
+                }
+            } else {
+                // Use on-chain data if no metadataURI is provided
+                setMetadata({
+                    title: projectData.title,
+                    description: projectData.description,
+                    category: projectData.category,
+                    files: [],
+                    createdAt: new Date(projectData.createdAt * 1000).toISOString(),
+                    creator: projectData.researcher
+                });
             }
-
-        } catch (err) {
+        } catch (err: any) {
             console.error('Failed to load project:', err);
-            setError('Failed to load project details');
+            const errorMessage = err.message?.includes('Project not found') 
+                ? 'Project not found' 
+                : 'Failed to load project details. Please try again.';
+            setError(errorMessage);
+            setProject(null);
+            setMetadata(null);
         } finally {
             setLoading(false);
         }
@@ -87,15 +109,25 @@ const ProjectDetails: React.FC = () => {
 
     const handleFund = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!contractInterface || !account || !id) return;
+        if (!contractInterface || !account || !id || !project) return;
 
         setTxPending(true);
         setError('');
 
         try {
+            // Convert amount to wei
+            const amountInWei = ethers.utils.parseEther(fundAmount);
+            
+            // Validate amount against milestone target
+            const milestone = project.milestones[selectedMilestone];
+            const remainingAmount = milestone.targetAmount.sub(milestone.currentAmount);
+            if (amountInWei.gt(remainingAmount)) {
+                throw new Error('Amount exceeds milestone target');
+            }
+
             const tx = await contractInterface.fundProject(
                 id,
-                fundAmount // Contract interface expects string, will handle parsing internally
+                selectedMilestone.toString()
             );
             await tx.wait();
             
@@ -182,10 +214,29 @@ const ProjectDetails: React.FC = () => {
                     <span>{currentFunding} AVAX raised</span>
                     <span>Goal: {totalFunding} AVAX</span>
                 </div>
-                
+
                 {project.isActive && !isResearcher && (
                     <form onSubmit={handleFund} className="funding-form">
                         <h3>Support this Research</h3>
+                        <div className="form-group">
+                            <label>Select Milestone to Fund</label>
+                            <select
+                                value={selectedMilestone}
+                                onChange={(e) => setSelectedMilestone(Number(e.target.value))}
+                                required
+                            >
+                                {project.milestones.map((m, idx) => {
+                                    const remainingFunding = ethers.utils.formatEther(
+                                        m.targetAmount.sub(m.currentAmount)
+                                    );
+                                    return (
+                                        <option key={idx} value={idx} disabled={m.isCompleted}>
+                                            Milestone {idx + 1} ({remainingFunding} AVAX remaining)
+                                        </option>
+                                    );
+                                })}
+                            </select>
+                        </div>
                         <div className="input-group">
                             <input
                                 type="number"
@@ -196,7 +247,7 @@ const ProjectDetails: React.FC = () => {
                                 placeholder="Amount in AVAX"
                                 required
                             />
-                            <button type="submit" disabled={txPending}>
+                            <button type="submit" disabled={txPending || !fundAmount}>
                                 {txPending ? 'Processing...' : 'Fund Project'}
                             </button>
                         </div>
@@ -228,8 +279,7 @@ const ProjectDetails: React.FC = () => {
                                 <div 
                                     className="progress" 
                                     style={{ 
-                                        width: `${(parseFloat(ethers.utils.formatEther(milestone.currentAmount)) / 
-                                            parseFloat(ethers.utils.formatEther(milestone.targetAmount))) * 100}%` 
+                                        width: `${(milestone.currentAmount.mul(100).div(milestone.targetAmount)).toString()}%`
                                     }}
                                 />
                             </div>
@@ -242,7 +292,7 @@ const ProjectDetails: React.FC = () => {
 
                         {!milestone.fundsReleased && (
                             <MilestoneVerificationStatus
-                                projectId={id!}
+                                projectId={id || ''}
                                 milestoneId={index.toString()}
                                 verificationCriteria={milestone.verificationCriteria}
                             />

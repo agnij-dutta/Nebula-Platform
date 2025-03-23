@@ -136,13 +136,13 @@ function App() {
                                         Browse IP
                                     </Link>
                                     <Link to="/research" className={activeView === 'research' ? 'active' : ''}>
-                                        Research Hub
+                                        The Hub
                                     </Link>
                                     <Link to="/governance" className={activeView === 'governance' ? 'active' : ''}>
                                         Governance
                                     </Link>
                                     <Link to="/staking" className={activeView === 'staking' ? 'active' : ''}>
-                                        Stake NEBL
+                                        Stake
                                     </Link>
                                     <Link to="/swap" className={activeView === 'swap' ? 'active' : ''}>
                                         Swap

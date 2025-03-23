@@ -20,9 +20,9 @@ export const WEB3_CONFIG = {
             chainId: 43113,
             name: 'Avalanche Fuji Testnet',
             rpcUrl: [
-                process.env.REACT_APP_AVALANCHE_TESTNET_RPC || 'https://api.avax-test.network/ext/bc/C/rpc',
+                'https://rpc.ankr.com/avalanche_fuji',
                 'https://avalanche-fuji.infura.io/v3/YOUR-PROJECT-ID',
-                'https://rpc.ankr.com/avalanche_fuji'
+                'https://api.avax-test.network/ext/bc/C/rpc'
             ],
             blockExplorerUrl: 'https://testnet.snowtrace.io',
             nativeCurrency: {
@@ -34,11 +34,11 @@ export const WEB3_CONFIG = {
         }
     },
     CONNECTION_CONFIG: {
-        timeoutMs: 15000, // 15 seconds timeout
-        retryCount: 3,
+        timeoutMs: 30000, // Increased to 30 seconds
+        retryCount: 5, // Increased retries
         retryDelayMs: 2000,
-        autoConnect: false,
-        allowedDomains: ['localhost', 'nebula-platform.vercel.app'] // Add your domains here
+        autoConnect: true, // Enable auto-connect
+        allowedDomains: ['localhost', 'nebula-platform.vercel.app']
     },
     CONTRACTS: {
         IPMarketplace: {
@@ -63,7 +63,7 @@ export const WEB3_CONFIG = {
             address: '0xCDa9e66F962EAAc98ebcFA925939A50263a07039',
         },
         MilestoneOracle: {
-            address: '0xe87758C6CCcf3806C9f1f0C8F99f6Dcae36E5449',
+            address: '0x7dA51954733b2F928A4f279B41B6e5e4490c7D0E',
         },
         MilestoneVerification: {
             address: '0x7dA51954733b2F928A4f279B41B6e5e4490c7D0E',
@@ -71,20 +71,19 @@ export const WEB3_CONFIG = {
         FundingEscrow: {
             address: '0xE328421898E13c9B5401Ec257A5D812C147d7D24',
         }
-
     },
-    GAS_LIMIT_MULTIPLIER: 1.2, // Add 20% to estimated gas
+    GAS_LIMIT_MULTIPLIER: 1.2,
     ETHERS_CONFIG: {
         blockConfirmations: 2,
-        timeout: 30000, // 30 seconds transaction timeout
+        timeout: 30000,
         rpcConfig: {
             allowRetry: true,
             maxRetries: 5,
             retryInterval: 2000,
-            batchSize: 5000, // Maximum blocks to query at once
+            batchSize: 5000,
             customBackoff: (attempt: number) => Math.min(2000 * Math.pow(2, attempt), 15000),
-            maxConcurrentBatches: 3, // Maximum number of concurrent batch requests
-            batchTimeout: 30000, // 30 seconds timeout for batch operations
+            maxConcurrentBatches: 3,
+            batchTimeout: 30000,
             headers: {
                 'Access-Control-Allow-Origin': '*',
                 'Access-Control-Allow-Methods': 'GET, POST',
@@ -92,5 +91,5 @@ export const WEB3_CONFIG = {
             }
         }
     }
-}
+};
 

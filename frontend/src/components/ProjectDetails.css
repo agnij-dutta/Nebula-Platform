@@ -7,6 +7,7 @@
 .back-button {
   display: inline-flex;
   align-items: center;
+  gap: 0.5rem;
   padding: 0.75rem 1.5rem;
   background: var(--glass-bg);
   backdrop-filter: blur(10px);
@@ -158,11 +159,6 @@
 }
 
 .funding-form {
-  background: var(--glass-bg);
-  backdrop-filter: blur(10px);
-  border: 1px solid var(--glass-border);
-  border-radius: 16px;
-  padding: 2rem;
   border-top: 1px solid var(--glass-border);
   padding-top: 2rem;
 }
@@ -170,6 +166,26 @@
 .funding-form h3 {
   margin-bottom: 1.5rem;
   color: rgb(var(--foreground-rgb));
+}
+
+.form-group {
+  margin-bottom: 1.5rem;
+}
+
+.form-group label {
+  display: block;
+  margin-bottom: 0.5rem;
+  color: rgba(var(--foreground-rgb), 0.8);
+}
+
+.form-group select {
+  width: 100%;
+  padding: 0.75rem;
+  background: rgba(var(--foreground-rgb), 0.05);
+  border: 1px solid rgba(var(--foreground-rgb), 0.1);
+  border-radius: 8px;
+  color: rgb(var(--foreground-rgb));
+  font-size: 1rem;
 }
 
 .input-group {
@@ -188,24 +204,23 @@
 }
 
 .input-group button {
-  padding: 0.75rem 2rem;
+  padding: 0.75rem 1.5rem;
   background: linear-gradient(45deg, #8B5CF6, #E0E7FF);
-  color: white;
   border: none;
   border-radius: 8px;
+  color: white;
+  font-weight: 500;
   cursor: pointer;
   transition: all 0.3s ease;
-  font-weight: 500;
-  font-size: 1rem;
 }
 
 .input-group button:hover:not(:disabled) {
   transform: translateY(-2px);
-  box-shadow: 0 4px 12px var(--glow-shadow);
+  box-shadow: 0 4px 12px rgba(139, 92, 246, 0.3);
 }
 
 .input-group button:disabled {
-  background: rgba(var(--foreground-rgb), 0.1);
+  opacity: 0.7;
   cursor: not-allowed;
 }
 
@@ -274,7 +289,7 @@
 .milestone-verification {
   margin-top: 1.5rem;
   padding-top: 1.5rem;
-  border-top: 1px solid #e5e7eb;
+  border-top: 1px solid var(--glass-border);
 }
 
 .milestone-actions {
@@ -319,7 +334,7 @@
 .milestone-progress-bar .progress {
   height: 100%;
   background: linear-gradient(45deg, #8B5CF6, #E0E7FF);
-  transition: width 0.5s ease;
+  transition: width 0.3s ease;
 }
 
 @media (max-width: 768px) {

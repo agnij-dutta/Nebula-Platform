@@ -94,6 +94,7 @@ interface VerificationRequest {
     customParams?: Record<string, any>;
 }
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 interface ContractMilestone {
     description: string;
     targetAmount: ethers.BigNumber;
@@ -724,61 +725,76 @@ export class ContractInterface {
         try {
             // Get main project details
             const project = await researchProject.getProject(projectId);
-            if (!project || !project.title) {
+            
+            // Better null check for project existence
+            if (!project || project.title === '') {
                 throw new Error('Project not found');
             }
 
-            // Get milestone details
-            const maxMilestones = 20; // Reasonable upper limit
+            // Get milestone details with retry
+            const maxMilestones = 20;
             const getMilestoneWithRetry = async (milestoneId: number) => {
                 try {
-                    const milestone: ContractMilestone = await researchProject.getMilestone(projectId, milestoneId);
-                    if (!milestone || !milestone.description) return null;
+                    const milestone = await researchProject.getMilestone(projectId, milestoneId);
+                    if (!milestone || milestone.description === '') return null;
                     
                     return {
                         description: milestone.description,
-                        targetAmount: ethers.utils.formatEther(milestone.targetAmount),
-                        currentAmount: ethers.utils.formatEther(milestone.currentAmount),
+                        targetAmount: milestone.targetAmount.toString(),
+                        currentAmount: milestone.currentAmount.toString(),
                         isCompleted: milestone.isCompleted,
-                        verificationCID: milestone.verificationCriteria // Map verificationCriteria to verificationCID
+                        fundsReleased: milestone.fundsReleased,
+                        verificationCriteria: milestone.verificationCriteria,
+                        verificationCID: milestone.verificationCID || '' // Add missing property
                     };
                 } catch {
-                    return null; // Ignore errors for individual milestones
+                    return null;
                 }
             };
 
+            // Load all milestones in parallel
             const milestonePromises = Array.from(
                 { length: maxMilestones },
                 (_, index) => getMilestoneWithRetry(index + 1)
             );
 
-            // Wait for all milestone queries to complete
             const milestones = (await Promise.all(milestonePromises))
                 .filter((m): m is NonNullable<typeof m> => m !== null);
+
+            if (milestones.length === 0) {
+                throw new Error('No milestones found for project');
+            }
 
             return {
                 projectId,
                 title: project.title,
                 description: project.description,
                 researcher: project.researcher,
-                totalFunding: ethers.utils.formatEther(project.totalFunding),
-                currentFunding: ethers.utils.formatEther(project.currentFunding),
+                totalFunding: project.totalFunding.toString(),
+                currentFunding: project.currentFunding.toString(),
                 isActive: project.isActive,
                 category: project.category,
                 createdAt: project.createdAt.toNumber(),
                 deadline: project.deadline.toNumber(),
                 metadataURI: project.metadataURI,
-                milestones
+                milestones: milestones.map(m => ({
+                    description: m.description,
+                    targetAmount: ethers.BigNumber.from(m.targetAmount).toString(),
+                    currentAmount: ethers.BigNumber.from(m.currentAmount).toString(),
+                    isCompleted: m.isCompleted,
+                    fundsReleased: m.fundsReleased,
+                    verificationCriteria: m.verificationCriteria,
+                    verificationCID: m.verificationCID || '' // Add missing property
+                }))
             };
-        } catch (err: any) {
-            // Improve error handling
-            if (err.message?.includes('project not found') || err.message?.includes('Project not found')) {
+        } catch (err) {
+            console.error('Error loading project details:', err);
+            if (err instanceof Error && 
+                (err.message.includes('project not found') || 
+                 err.message.includes('Project not found'))) {
                 throw new Error('Project not found');
             }
-            if (err.code === -32603) {
-                throw new Error('Network error. Please check your connection and try again.');
-            }
-            throw new Error(err.message || 'Failed to load project details');
+            throw new Error('Failed to load project details. Please try again.');
         }
     }
 
