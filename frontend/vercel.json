@@ -28,7 +28,7 @@
         },
         {
           "key": "Content-Security-Policy",
-          "value": "default-src 'self' 'unsafe-inline' 'unsafe-eval' data: *.infura.io *.walletconnect.com *.wallet.coinbase.com;"
+          "value": "default-src * 'unsafe-inline' 'unsafe-eval' data:;"
         }
       ]
     },

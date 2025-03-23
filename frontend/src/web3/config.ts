@@ -38,7 +38,7 @@ export const WEB3_CONFIG = {
         retryCount: 5, // Increased retries
         retryDelayMs: 2000,
         autoConnect: true, // Enable auto-connect
-        allowedDomains: ['localhost', 'nebula-platform.vercel.app']
+        allowedDomains: ['localhost', 'nebula-platform-one.vercel.app']
     },
     CONTRACTS: {
         IPMarketplace: {
