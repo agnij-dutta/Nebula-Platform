@@ -1,5 +1,6 @@
 import { create } from 'ipfs-http-client';
 import { Buffer } from 'buffer';
+import { IPTokenMetadata } from '../../types/ipTokens';
 
 const INFURA_PROJECT_ID = '549a3becfe064ab59d726f192917646e';
 const INFURA_PROJECT_SECRET = '4zLJi4DX/Kl+Jl2zYo9MknqJjQijpjvppCnJg7z89oyvxhCOIY6fXw';
@@ -43,6 +44,15 @@ export const ipfsService = {
         }
     },
 
+    async uploadIPMetadata(metadata: IPTokenMetadata): Promise<string> {
+        return this.uploadJSON(metadata);
+    },
+
+    async getIPMetadata(cid: string): Promise<IPTokenMetadata> {
+        const data = await this.fetchIPFSContent(cid);
+        return data as IPTokenMetadata;
+    },
+
     getIPFSUrl(cid: string): string {
         // Try multiple gateways to avoid CORS issues
         const gateway = IPFS_GATEWAYS[Math.floor(Math.random() * IPFS_GATEWAYS.length)];
@@ -50,17 +60,23 @@ export const ipfsService = {
     },
 
     async fetchIPFSContent(cid: string): Promise<any> {
-        const corsProxy = 'https://api.allorigins.win/raw?url=';
-        const ipfsUrl = this.getIPFSUrl(cid);
-
-        try {
-            const response = await fetch(`${corsProxy}${encodeURIComponent(ipfsUrl)}`);
-            if (!response.ok) throw new Error('Failed to fetch from IPFS');
-            return await response.json();
-        } catch (error) {
-            console.error('IPFS fetch error:', error);
-            throw error;
+        let lastError: Error | null = null;
+        
+        // Try each gateway until one works
+        for (const gateway of IPFS_GATEWAYS) {
+            try {
+                const response = await fetch(`${gateway}/ipfs/${cid}`);
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                return await response.json();
+            } catch (err) {
+                lastError = err as Error;
+                continue;
+            }
         }
+        
+        throw lastError || new Error('Failed to fetch IPFS content');
     }
 };
 

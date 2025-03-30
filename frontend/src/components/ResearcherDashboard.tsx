@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { ethers } from 'ethers';
 import { useWeb3 } from '../web3/hooks/useWeb3';
 import { ProjectDetails } from '../web3/utils/contracts';
+import { IPTokenData } from '../types/ipTokens';
 import CreateListing from './CreateListing';
 import WalletPrompt from './WalletPrompt';
 import ErrorDisplay from './ErrorDisplay';
@@ -13,24 +14,40 @@ enum DashboardTab {
     IP = 'ip'
 }
 
-interface IPToken {
-    tokenId: string;
-    title: string;
-    description: string;
-    isListed: boolean;
-    price: string;
-    creator: string;
-}
-
 const ResearcherDashboard: React.FC = () => {
     const { contractInterface, account, needsWallet, connectWallet } = useWeb3();
     const [activeTab, setActiveTab] = useState<DashboardTab>(DashboardTab.Projects);
     const [projects, setProjects] = useState<ProjectDetails[]>([]);
-    const [ownedTokens, setOwnedTokens] = useState<IPToken[]>([]);
+    const [ownedTokens, setOwnedTokens] = useState<IPTokenData[]>([]);
     const [totalFunding, setTotalFunding] = useState<string>('0');
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
     const [isRetrying, setIsRetrying] = useState(false);
+
+    const loadIPTokens = useCallback(async () => {
+        if (!contractInterface || !account) return;
+        setLoading(true);
+        setError('');
+        
+        try {
+            const tokens = await contractInterface.getOwnedTokens(account);
+            setOwnedTokens(tokens);
+        } catch (err: any) {
+            console.error('Failed to load IP tokens:', err);
+            let errorMessage = 'Failed to load your IP tokens. Please try again.';
+            
+            if (err?.code === -32603 || err?.message?.includes('network')) {
+                errorMessage = 'Network connection error. Please check your connection and try again.';
+            } else if (err?.message?.includes('user rejected') || err?.code === 4001) {
+                errorMessage = 'Request was rejected. Please try again.';
+            }
+            
+            setError(errorMessage);
+        } finally {
+            setLoading(false);
+            setIsRetrying(false);
+        }
+    }, [contractInterface, account]);
 
     const loadProjects = useCallback(async () => {
         if (!contractInterface || !account) return;
@@ -75,26 +92,6 @@ const ResearcherDashboard: React.FC = () => {
         } catch (err: any) {
             console.error('Failed to load projects:', err);
             setError(err?.message || 'Failed to load your research projects');
-        } finally {
-            setLoading(false);
-            setIsRetrying(false);
-        }
-    }, [contractInterface, account]);
-
-    const loadIPTokens = useCallback(async () => {
-        if (!contractInterface || !account) return;
-        setLoading(true);
-        setError('');
-        try {
-            const tokens = await contractInterface.getOwnedTokens(account);
-            setOwnedTokens(tokens);
-        } catch (err: any) {
-            console.error('Failed to load IP tokens:', err);
-            if (err?.code === -32603) {
-                setError('Network error. Please check your connection and try again.');
-            } else {
-                setError('Failed to load your IP tokens. Please try again.');
-            }
         } finally {
             setLoading(false);
             setIsRetrying(false);

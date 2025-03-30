@@ -6,8 +6,8 @@ export const WEB3_CONFIG = {
             name: 'Avalanche Mainnet',
             rpcUrl: [
                 process.env.REACT_APP_AVALANCHE_MAINNET_RPC || 'https://api.avax.network/ext/bc/C/rpc',
-                'https://avalanche-mainnet.infura.io/v3/YOUR-PROJECT-ID',
-                'https://rpc.ankr.com/avalanche'
+                'https://avalanche-c-chain.publicnode.com',
+                'https://avalanche.public-rpc.com'
             ],
             nativeCurrency: {
                 name: 'AVAX',
@@ -20,9 +20,9 @@ export const WEB3_CONFIG = {
             chainId: 43113,
             name: 'Avalanche Fuji Testnet',
             rpcUrl: [
-                'https://rpc.ankr.com/avalanche_fuji',
-                'https://avalanche-fuji.infura.io/v3/YOUR-PROJECT-ID',
-                'https://api.avax-test.network/ext/bc/C/rpc'
+                'https://api.avax-test.network/ext/bc/C/rpc',
+                'https://avalanche-fuji-c-chain.publicnode.com',
+                'https://endpoints.omniatech.io/v1/avax/fuji/public'
             ],
             blockExplorerUrl: 'https://testnet.snowtrace.io',
             nativeCurrency: {
@@ -34,10 +34,10 @@ export const WEB3_CONFIG = {
         }
     },
     CONNECTION_CONFIG: {
-        timeoutMs: 30000, // Increased to 30 seconds
-        retryCount: 5, // Increased retries
-        retryDelayMs: 2000,
-        autoConnect: true, // Enable auto-connect
+        timeoutMs: 30000, // Reduced timeout for faster fallback
+        retryCount: 3,
+        retryDelayMs: 1000,
+        autoConnect: true,
         allowedDomains: ['localhost', 'nebula-platform-one.vercel.app']
     },
     CONTRACTS: {
@@ -78,16 +78,16 @@ export const WEB3_CONFIG = {
         timeout: 30000,
         rpcConfig: {
             allowRetry: true,
-            maxRetries: 5,
-            retryInterval: 2000,
-            batchSize: 5000,
-            customBackoff: (attempt: number) => Math.min(2000 * Math.pow(2, attempt), 15000),
-            maxConcurrentBatches: 3,
+            maxRetries: 3,
+            retryInterval: 1000,
+            batchSize: 1000, // Reduced batch size
+            customBackoff: (attempt: number) => Math.min(1000 * Math.pow(2, attempt), 10000),
+            maxConcurrentBatches: 1, // Reduced to prevent rate limiting
             batchTimeout: 30000,
             headers: {
                 'Access-Control-Allow-Origin': '*',
                 'Access-Control-Allow-Methods': 'GET, POST',
-                'Access-Control-Allow-Headers': 'Content-Type, Authorization'
+                'Content-Type': 'application/json'
             }
         }
     }
