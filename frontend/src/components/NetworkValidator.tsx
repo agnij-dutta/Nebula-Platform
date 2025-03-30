@@ -12,7 +12,6 @@ const NetworkValidator = () => {
     const [rpcStatus, setRpcStatus] = useState<'connecting' | 'connected' | 'error'>('connecting');
     const [isValidating, setIsValidating] = useState(false);
     const [validationAttempts, setValidationAttempts] = useState(0);
-    const [currentProvider, setCurrentProvider] = useState(0);
 
     const testConnection = useCallback(async (providerUrl: string): Promise<boolean> => {
         try {
@@ -81,23 +80,14 @@ const NetworkValidator = () => {
 
             // Test official Avalanche RPC first
             if (await testConnection(rpcUrls[0])) {
-                setCurrentProvider(0);
                 connected = true;
             } else {
                 // Test remaining RPCs in parallel
                 const results = await Promise.all(
-                    rpcUrls.slice(1).map((url, index) => 
-                        testConnection(url)
-                            .then(success => ({ index: index + 1, success }))
-                    )
+                    rpcUrls.slice(1).map(url => testConnection(url))
                 );
 
-                // Find first working provider
-                const workingProvider = results.find(result => result.success);
-                if (workingProvider) {
-                    setCurrentProvider(workingProvider.index);
-                    connected = true;
-                }
+                connected = results.some(success => success);
             }
 
             if (connected) {
