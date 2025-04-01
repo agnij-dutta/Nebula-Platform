@@ -154,7 +154,9 @@ export class BaseContract {
                 
                 await new Promise(resolve => 
                     setTimeout(resolve, 
-                        WEB3_CONFIG.ETHERS_CONFIG.rpcConfig.customBackoff(attempt)
+                        WEB3_CONFIG.ETHERS_CONFIG.rpcConfig.customBackoff(
+                            WEB3_CONFIG.ETHERS_CONFIG.rpcConfig.maxRetries - attempt
+                        )
                     )
                 );
             }
@@ -292,7 +294,7 @@ interface Listing {
 
 // Update ContractInterface to extend BaseContract
 // Add block range constants
-const MAX_BLOCK_RANGE = 2000; // Slightly under RPC limit of 2048 for safety
+const MAX_BLOCK_RANGE = 2000; // Slightly under Fuji's 2048 limit for safety
 
 export class ContractInterface {
     public readonly provider: ethers.providers.Web3Provider;
@@ -490,17 +492,30 @@ export class ContractInterface {
             licenseDuration
         );
         
-        const tx = await marketplace.createListing(
-            tokenId,
-            ethers.utils.parseEther(price),
-            isLicense,
-            licenseDuration,
-            {
-                gasLimit: gasEstimate.mul(120).div(100) // Add 20% buffer
+        try {
+            const tx = await marketplace.createListing(
+                tokenId,
+                ethers.utils.parseEther(price),
+                isLicense,
+                licenseDuration,
+                {
+                    gasLimit: gasEstimate.mul(120).div(100) // Add 20% buffer
+                }
+            );
+    
+            // Check if wait is a function before calling it
+            if (tx && typeof tx.wait === 'function') {
+                return await tx.wait();
+            } else {
+                // If tx.wait is not a function, the transaction might already be processed
+                // or we're getting a different type of response
+                console.log("Transaction completed, but wait function not available:", tx);
+                return tx; // Return the transaction object as is
             }
-        );
-
-        return tx.wait();
+        } catch (error) {
+            console.error("Error creating listing:", error);
+            throw error;
+        }
     }
 
     async hasValidLicense(tokenId: number, address: string) {
@@ -530,20 +545,18 @@ export class ContractInterface {
 
             // Get the current block number
             const latestBlock = await provider.getBlockNumber();
+            
+            // Start from a reasonable point in the past (last ~2 weeks of blocks)
+            const startBlock = Math.max(0, latestBlock - 100800); // ~2 weeks of blocks at 12s/block
             const tokenIds = new Set<string>();
 
             // Fetch transfer events in chunks
-            for (let fromBlock = Math.max(0, latestBlock - 50000); fromBlock <= latestBlock; fromBlock += MAX_BLOCK_RANGE) {
+            for (let fromBlock = startBlock; fromBlock <= latestBlock; fromBlock += MAX_BLOCK_RANGE) {
                 const toBlock = Math.min(fromBlock + MAX_BLOCK_RANGE - 1, latestBlock);
                 
                 try {
-                    const filter = {
-                        ...contract.filters.Transfer(null, address, null),
-                        fromBlock,
-                        toBlock
-                    };
-
-                    const events = await contract.queryFilter(filter);
+                    const transferFilter = contract.filters.Transfer(null, address, null);
+                    const events = await contract.queryFilter(transferFilter, fromBlock, toBlock);
                     events.forEach(e => tokenIds.add(e.args?.tokenId.toString()));
                 } catch (err) {
                     console.warn(`Failed to fetch events for blocks ${fromBlock}-${toBlock}:`, err);
@@ -569,8 +582,8 @@ export class ContractInterface {
                             tokenId,
                             title: details.title,
                             description: details.description,
-                            price: ethers.utils.formatEther(details.price),
-                            isListed: details.isListed,
+                            price: '0',
+                            isListed: false,
                             creator: details.creator,
                             licenseTerms: details.licenseTerms,
                             owner: owner,

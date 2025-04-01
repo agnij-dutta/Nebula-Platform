@@ -17,6 +17,7 @@ const ListingsContainer: React.FC = () => {
     const [currentPage, setCurrentPage] = useState(0);
     const [hasMore, setHasMore] = useState(true);
     const [isPurchasing, setIsPurchasing] = useState(false);
+    const [purchasingId, setPurchasingId] = useState<string | null>(null);
 
     const loadListings = useCallback(async () => {
         if (!contractInterface) return;
@@ -39,7 +40,9 @@ const ListingsContainer: React.FC = () => {
                             tokenId: listing.tokenId.toString(),
                             title: details.title || 'Untitled IP',
                             description: details.description || 'No description available',
-                            price: ethers.utils.formatEther(listing.price),
+                            price: typeof listing.price === 'string' 
+                                ? ethers.utils.formatEther(listing.price.replace(/\.0+$/, '')) // Remove trailing .0
+                                : ethers.utils.formatEther(listing.price),
                             isListed: true,
                             creator: details.creator,
                             licenseTerms: details.licenseTerms,
@@ -99,6 +102,7 @@ const ListingsContainer: React.FC = () => {
         
         try {
             setIsPurchasing(true);
+            setPurchasingId(tokenId);
             setError(null);
             
             // First check if we have enough balance
@@ -134,7 +138,12 @@ const ListingsContainer: React.FC = () => {
             setError(errorMessage);
         } finally {
             setIsPurchasing(false);
+            setPurchasingId(null);
         }
+    };
+
+    const loadMore = () => {
+        setCurrentPage(prev => prev + 1);
     };
 
     if (needsWallet) {
@@ -148,66 +157,84 @@ const ListingsContainer: React.FC = () => {
 
     return (
         <div className="listings-container">
-            <h1>IP Marketplace</h1>
+            <div className="listings-header">
+                <h1>IP Marketplace</h1>
+                <p>Discover and acquire intellectual property tokens from creators around the world</p>
+            </div>
+            
             {error && <ErrorDisplay message={error} onRetry={loadListings} />}
             
             <div className="listings-grid">
-                {listings.map(listing => (
-                    <div key={listing.tokenId} className="listing-card">
-                        {listing.ipfsMetadata?.images && listing.ipfsMetadata.images[0] && (
+                {listings.length === 0 && !loading ? (
+                    <div className="no-listings">No IP listings available at the moment</div>
+                ) : (
+                    listings.map(listing => (
+                        <div key={listing.tokenId} className="listing-card">
                             <div className="listing-image">
-                                <img 
-                                    src={ipfsService.getIPFSUrl(listing.ipfsMetadata.images[0])}
-                                    alt={listing.title}
-                                    onError={(e) => {
-                                        const target = e.target as HTMLImageElement;
-                                        target.style.display = 'none';
-                                    }}
-                                />
+                                {listing.ipfsMetadata?.images && listing.ipfsMetadata.images[0] ? (
+                                    <img 
+                                        src={ipfsService.getIPFSUrl(listing.ipfsMetadata.images[0])}
+                                        alt={listing.title}
+                                        onError={(e) => {
+                                            const target = e.target as HTMLImageElement;
+                                            target.style.display = 'none';
+                                        }}
+                                    />
+                                ) : (
+                                    <div className="placeholder-image"></div>
+                                )}
                             </div>
-                        )}
-                        
-                        <div className="listing-content">
-                            <h3>{listing.title}</h3>
-                            <p className="description">
-                                {listing.ipfsMetadata?.description || listing.description}
-                            </p>
                             
-                            {listing.ipfsMetadata?.additionalDetails?.tags && (
-                                <div className="tags">
-                                    {listing.ipfsMetadata.additionalDetails.tags.map((tag, index) => (
-                                        <span key={index} className="tag">{tag}</span>
-                                    ))}
+                            <div className="listing-content">
+                                <h3>{listing.title}</h3>
+                                <p className="description">
+                                    {listing.ipfsMetadata?.description || listing.description}
+                                </p>
+                                
+                                {listing.ipfsMetadata?.additionalDetails?.tags && (
+                                    <div className="tags">
+                                        {listing.ipfsMetadata.additionalDetails.tags.map((tag, index) => (
+                                            <span key={index} className="tag">{tag}</span>
+                                        ))}
+                                    </div>
+                                )}
+                                
+                                <div className="price">
+                                    <span>{listing.price} AVAX</span>
                                 </div>
-                            )}
-                            
-                            <div className="price">
-                                <span>Price: {listing.price} AVAX</span>
+                                
+                                <button 
+                                    onClick={() => handlePurchase(listing.tokenId, listing.price)}
+                                    className="purchase-button"
+                                    disabled={isPurchasing || listing.owner.toLowerCase() === account?.toLowerCase()}
+                                >
+                                    {isPurchasing && purchasingId === listing.tokenId ? 'Processing...' : 
+                                     listing.owner.toLowerCase() === account?.toLowerCase() ? 'You own this' : 
+                                     'Purchase'}
+                                </button>
                             </div>
-                            
-                            <button 
-                                onClick={() => handlePurchase(listing.tokenId, listing.price)}
-                                className="purchase-button"
-                                disabled={isPurchasing || listing.owner.toLowerCase() === account?.toLowerCase()}
-                            >
-                                {isPurchasing ? 'Processing...' : 
-                                 listing.owner.toLowerCase() === account?.toLowerCase() ? 'You own this' : 
-                                 'Purchase'}
-                            </button>
                         </div>
+                    ))
+                )}
+                
+                {loading && (
+                    <div className="loading-container">
+                        <div className="loading-spinner"></div>
+                        <p>Loading IP listings...</p>
                     </div>
-                ))}
+                )}
             </div>
             
-            {loading && <div className="loading">Loading listings...</div>}
-            
-            {hasMore && !loading && (
-                <button 
-                    onClick={() => setCurrentPage(prev => prev + 1)}
-                    className="load-more"
-                >
+            {hasMore && listings.length > 0 && !loading && (
+                <button onClick={loadMore} className="load-more-button">
                     Load More
                 </button>
+            )}
+            
+            {!hasMore && listings.length > 0 && (
+                <div className="no-more-listings">
+                    You've reached the end of the listings
+                </div>
             )}
         </div>
     );
