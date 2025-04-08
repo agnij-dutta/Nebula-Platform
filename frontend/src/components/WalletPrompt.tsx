@@ -83,19 +83,31 @@ const WalletPrompt: React.FC<WalletPromptProps> = ({
 
     return (
         <div className="wallet-prompt">
+            {/* Animated background elements */}
+            <div className="nebula-particles">
+                <div className="particle p1"></div>
+                <div className="particle p2"></div>
+                <div className="particle p3"></div>
+                <div className="particle p4"></div>
+                <div className="particle p5"></div>
+                <div className="particle p6"></div>
+            </div>
+            
             <div className="wallet-prompt-content">
-                <div className={`wallet-icon-wrapper ${isInProgress ? 'spin' : ''}`}>
-                    <img 
-                        src="/metamask.svg" 
-                        alt="MetaMask" 
-                        className="wallet-icon"
-                    />
+                {/* Glowing logo */}
+                <div className="nebula-logo-container">
+                    <div className="nebula-logo">N</div>
                 </div>
                 
-                <h3>{message}</h3>
+                {/* Welcome message with animated gradient text */}
+                <div className="welcome-message">
+                    <h2 className="welcome-title">Welcome to Nebula</h2>
+                    <p className="welcome-subtitle">Platform! Connect your wallet to get started</p>
+                </div>
                 
                 {!isMetaMaskInstalled && (
                     <div className="install-prompt">
+                        <div className="install-icon">⚠️</div>
                         <p>MetaMask is required to use the Nebula Platform</p>
                         <p className="install-description">
                             MetaMask is a secure wallet that helps you interact with Web3 applications.
@@ -105,32 +117,65 @@ const WalletPrompt: React.FC<WalletPromptProps> = ({
                 
                 {error && (
                     <div className="error-message">
+                        <div className="error-icon">⚠️</div>
                         {error}
                     </div>
                 )}
                 
-                <button 
-                    onClick={handleConnect} 
-                    className={`connect-button ${isInProgress ? 'loading' : ''}`}
-                    disabled={isInProgress}
-                >
-                    {isNetworkSwitching 
-                        ? 'Switching Network...'
-                        : isLoading || isConnecting
-                            ? 'Connecting...'
-                            : isMetaMaskInstalled 
-                                ? 'Connect Wallet'
-                                : 'Install MetaMask'}
-                </button>
+                {/* Futuristic connect button with hover effects */}
+                <div className="connect-button-container">
+                    <button 
+                        onClick={handleConnect} 
+                        className={`connect-button ${isInProgress ? 'loading' : ''}`}
+                        disabled={isInProgress}
+                    >
+                        <span className="button-text">
+                            {isNetworkSwitching 
+                                ? 'Switching Network...'
+                                : isLoading || isConnecting
+                                    ? 'Connecting...'
+                                    : isMetaMaskInstalled 
+                                        ? 'Connect Wallet'
+                                        : 'Install MetaMask'}
+                        </span>
+                        <div className="button-glow"></div>
+                    </button>
+                    
+                    {/* Wallet icon with animation */}
+                    <div className={`wallet-icon-wrapper ${isInProgress ? 'spin' : ''}`}>
+                        <img 
+                            src="/metamask.svg" 
+                            alt="MetaMask" 
+                            className="wallet-icon"
+                        />
+                    </div>
+                </div>
 
+                {/* Network info card with glass morphism */}
                 <div className="network-info">
-                    <div className="title">Required Network</div>
-                    <div className="network-name">
-                        {WEB3_CONFIG.NETWORKS.TESTNET.name}
-                        <div className="network-details">
-                            <div>Chain ID: {WEB3_CONFIG.NETWORKS.TESTNET.chainId}</div>
-                            <div>Currency: {WEB3_CONFIG.NETWORKS.TESTNET.nativeCurrency.symbol}</div>
-                            <div>RPC: {WEB3_CONFIG.NETWORKS.TESTNET.rpcUrl[0]}</div>
+                    <div className="network-card">
+                        <div className="network-header">
+                            <div className="network-indicator"></div>
+                            <div className="network-title">Required Network</div>
+                        </div>
+                        <div className="network-content">
+                            <div className="network-name">
+                                {WEB3_CONFIG.NETWORKS.TESTNET.name}
+                            </div>
+                            <div className="network-details">
+                                <div className="network-detail">
+                                    <span className="detail-label">Chain ID:</span>
+                                    <span className="detail-value">{WEB3_CONFIG.NETWORKS.TESTNET.chainId}</span>
+                                </div>
+                                <div className="network-detail">
+                                    <span className="detail-label">Currency:</span>
+                                    <span className="detail-value">{WEB3_CONFIG.NETWORKS.TESTNET.nativeCurrency.symbol}</span>
+                                </div>
+                                <div className="network-detail">
+                                    <span className="detail-label">RPC:</span>
+                                    <span className="detail-value truncate">{WEB3_CONFIG.NETWORKS.TESTNET.rpcUrl[0]}</span>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
