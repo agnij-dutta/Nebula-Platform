@@ -1,8 +1,9 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { WEB3_CONFIG } from '../web3/config';
 import { useWeb3 } from '../web3/hooks/useWeb3';
+import './NetworkValidator.css';
 
-const AUTO_RETRY_INTERVAL = 3000;
+const AUTO_RETRY_INTERVAL = 5000;
 const MAX_VALIDATION_ATTEMPTS = 3;
 const RPC_TIMEOUT = 5000;
 
@@ -12,6 +13,7 @@ const NetworkValidator = () => {
     const [rpcStatus, setRpcStatus] = useState<'connecting' | 'connected' | 'error'>('connecting');
     const [isValidating, setIsValidating] = useState(false);
     const [validationAttempts, setValidationAttempts] = useState(0);
+    const [showRpcRetry, setShowRpcRetry] = useState(false);
 
     const testConnection = useCallback(async (providerUrl: string): Promise<boolean> => {
         try {
@@ -58,6 +60,7 @@ const NetworkValidator = () => {
         }
 
         setIsValidating(true);
+        setShowRpcRetry(false);
 
         try {
             // Check chain ID first
@@ -105,7 +108,7 @@ const NetworkValidator = () => {
 
         } catch (err) {
             console.error('Network validation failed:', err);
-            setNetworkError('Network connection unstable. Retrying...');
+            setNetworkError('Network connection is unstable');
             setRpcStatus('error');
             setValidationAttempts(prev => prev + 1);
 
@@ -114,7 +117,8 @@ const NetworkValidator = () => {
                     setIsValidating(false);
                 }, AUTO_RETRY_INTERVAL);
             } else {
-                setNetworkError('Network connection failed. Please check your connection and try again.');
+                setNetworkError('Network connection failed');
+                setShowRpcRetry(true);
             }
         } finally {
             setIsValidating(false);
@@ -138,19 +142,38 @@ const NetworkValidator = () => {
 
     if (networkError && rpcStatus === 'error') {
         return (
-            <div className="network-error">
-                <p>{networkError}</p>
-                {validationAttempts >= MAX_VALIDATION_ATTEMPTS && (
-                    <button 
-                        onClick={() => {
-                            setValidationAttempts(0);
-                            setIsValidating(false);
-                        }}
-                        className="retry-button"
-                    >
-                        Retry Connection
-                    </button>
-                )}
+            <div className="network-error-container">
+                <div className="network-error-content">
+                    <div className="network-error-icon">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <circle cx="12" cy="12" r="10"></circle>
+                            <line x1="12" y1="8" x2="12" y2="12"></line>
+                            <line x1="12" y1="16" x2="12.01" y2="16"></line>
+                        </svg>
+                    </div>
+                    <div className="network-error-message">
+                        <h3>Network Connection Issue</h3>
+                        <p>{networkError}</p>
+                        {isValidating && (
+                            <div className="network-retry-progress">
+                                <div className="retry-spinner"></div>
+                                <span>Retrying connection...</span>
+                            </div>
+                        )}
+                        {showRpcRetry && (
+                            <button 
+                                onClick={() => {
+                                    setValidationAttempts(0);
+                                    setIsValidating(false);
+                                    validateNetwork();
+                                }}
+                                className="retry-button"
+                            >
+                                Retry Connection
+                            </button>
+                        )}
+                    </div>
+                </div>
             </div>
         );
     }

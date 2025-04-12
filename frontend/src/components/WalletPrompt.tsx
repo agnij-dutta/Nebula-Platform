@@ -1,187 +1,108 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import { WEB3_CONFIG } from '../web3/config';
-import './WalletPrompt.css';
+import React from "react";
+import "./WalletPrompt.css";
 
 interface WalletPromptProps {
-    message?: string;
-    onConnect: () => Promise<void>;
-    isNetworkSwitching?: boolean;
-    isLoading?: boolean;
+  message: string;
+  onConnect: () => void;
+  isLoading?: boolean;
+  isWrongNetwork?: boolean;
+  chainId?: string | null;
+  onSwitchNetwork?: () => void;
+  isNetworkSwitching?: boolean;
 }
 
-const WalletPrompt: React.FC<WalletPromptProps> = ({ 
-    message = "To interact with the Nebula Platform, please connect your wallet",
-    onConnect,
-    isNetworkSwitching = false,
-    isLoading = false
+const WalletPrompt: React.FC<WalletPromptProps> = ({
+  message,
+  onConnect,
+  isLoading = false,
+  isWrongNetwork = false,
+  chainId = null,
+  onSwitchNetwork,
+  isNetworkSwitching = false,
 }) => {
-    const [error, setError] = useState<string>('');
-    const [isConnecting, setIsConnecting] = useState(false);
-    
-    // Combined loading state
-    const isInProgress = isLoading || isNetworkSwitching || isConnecting;
-    const isMetaMaskInstalled = typeof window !== 'undefined' && !!window.ethereum?.isMetaMask;
-
-    useEffect(() => {
-        if (!isLoading && !isNetworkSwitching && isConnecting) {
-            setIsConnecting(false);
-        }
-    }, [isLoading, isNetworkSwitching, isConnecting]);
-
-    const openMetaMaskInstall = () => {
-        window.open('https://metamask.io/download.html', '_blank');
-    };
-
-    const handleConnect = useCallback(async () => {
-        if (!isMetaMaskInstalled) {
-            openMetaMaskInstall();
-            return;
-        }
-
-        if (isInProgress) {
-            return;
-        }
-        
-        setError('');
-        setIsConnecting(true);
-        
-        try {
-            await onConnect();
-        } catch (err: any) {
-            console.error('Connection error:', err);
-            
-            if (err.message?.includes('already pending') || err.message?.includes('already in progress')) {
-                setError('Please check MetaMask for pending connection requests');
-                return;
-            } else if (err.message?.includes('rejected')) {
-                setError('Connection rejected. Please try again.');
-            } else {
-                setError(err.message || 'Failed to connect wallet. Please try again.');
-            }
-        } finally {
-            if (!error?.includes('already pending') && !error?.includes('already in progress')) {
-                setIsConnecting(false);
-            }
-        }
-    }, [isInProgress, onConnect, error, isMetaMaskInstalled]);
-
-    // Reset error after 5 seconds for pending requests
-    useEffect(() => {
-        let errorTimeout: NodeJS.Timeout;
-        if (error && (error.includes('already pending') || error.includes('already in progress'))) {
-            errorTimeout = setTimeout(() => {
-                setError('');
-                setIsConnecting(false);
-            }, 5000);
-        }
-        return () => {
-            if (errorTimeout) {
-                clearTimeout(errorTimeout);
-            }
-        };
-    }, [error]);
+  const renderContent = () => {
+    if (isWrongNetwork && onSwitchNetwork) {
+      return (
+        <>
+          <div className="network-card">
+            <div className="network-header">
+              <div className="network-indicator" style={{ background: 'var(--error)' }}></div>
+              <div className="network-title">Wrong Network</div>
+            </div>
+            <div className="network-content">
+              <div className="network-name">Please Switch to Avalanche Fuji</div>
+              <div className="network-details">
+                <div className="network-detail">
+                  <span className="detail-label">Current</span>
+                  <span className="detail-value">{chainId || 'Unknown'}</span>
+                </div>
+                <div className="network-detail">
+                  <span className="detail-label">Required</span>
+                  <span className="detail-value">0xA869</span>
+                </div>
+              </div>
+              <button
+                className={`connect-button ${isNetworkSwitching ? "loading" : ""}`}
+                onClick={onSwitchNetwork}
+                disabled={isNetworkSwitching}
+              >
+                <span className="button-text">Switch to Avalanche Fuji</span>
+                <div className="button-glow"></div>
+              </button>
+            </div>
+          </div>
+        </>
+      );
+    }
 
     return (
-        <div className="wallet-prompt">
-            {/* Animated background elements */}
-            <div className="nebula-particles">
-                <div className="particle p1"></div>
-                <div className="particle p2"></div>
-                <div className="particle p3"></div>
-                <div className="particle p4"></div>
-                <div className="particle p5"></div>
-                <div className="particle p6"></div>
-            </div>
-            
-            <div className="wallet-prompt-content">
-                {/* Glowing logo */}
-                <div className="nebula-logo-container">
-                    <div className="nebula-logo">N</div>
-                </div>
-                
-                {/* Welcome message with animated gradient text */}
-                <div className="welcome-message">
-                    <h2 className="welcome-title">Welcome to Nebula</h2>
-                    <p className="welcome-subtitle">Platform! Connect your wallet to get started</p>
-                </div>
-                
-                {!isMetaMaskInstalled && (
-                    <div className="install-prompt">
-                        <div className="install-icon">⚠️</div>
-                        <p>MetaMask is required to use the Nebula Platform</p>
-                        <p className="install-description">
-                            MetaMask is a secure wallet that helps you interact with Web3 applications.
-                        </p>
-                    </div>
-                )}
-                
-                {error && (
-                    <div className="error-message">
-                        <div className="error-icon">⚠️</div>
-                        {error}
-                    </div>
-                )}
-                
-                {/* Futuristic connect button with hover effects */}
-                <div className="connect-button-container">
-                    <button 
-                        onClick={handleConnect} 
-                        className={`connect-button ${isInProgress ? 'loading' : ''}`}
-                        disabled={isInProgress}
-                    >
-                        <span className="button-text">
-                            {isNetworkSwitching 
-                                ? 'Switching Network...'
-                                : isLoading || isConnecting
-                                    ? 'Connecting...'
-                                    : isMetaMaskInstalled 
-                                        ? 'Connect Wallet'
-                                        : 'Install MetaMask'}
-                        </span>
-                        <div className="button-glow"></div>
-                    </button>
-                    
-                    {/* Wallet icon with animation */}
-                    <div className={`wallet-icon-wrapper ${isInProgress ? 'spin' : ''}`}>
-                        <img 
-                            src="/metamask.svg" 
-                            alt="MetaMask" 
-                            className="wallet-icon"
-                        />
-                    </div>
-                </div>
-
-                {/* Network info card with glass morphism */}
-                <div className="network-info">
-                    <div className="network-card">
-                        <div className="network-header">
-                            <div className="network-indicator"></div>
-                            <div className="network-title">Required Network</div>
-                        </div>
-                        <div className="network-content">
-                            <div className="network-name">
-                                {WEB3_CONFIG.NETWORKS.TESTNET.name}
-                            </div>
-                            <div className="network-details">
-                                <div className="network-detail">
-                                    <span className="detail-label">Chain ID:</span>
-                                    <span className="detail-value">{WEB3_CONFIG.NETWORKS.TESTNET.chainId}</span>
-                                </div>
-                                <div className="network-detail">
-                                    <span className="detail-label">Currency:</span>
-                                    <span className="detail-value">{WEB3_CONFIG.NETWORKS.TESTNET.nativeCurrency.symbol}</span>
-                                </div>
-                                <div className="network-detail">
-                                    <span className="detail-label">RPC:</span>
-                                    <span className="detail-value truncate">{WEB3_CONFIG.NETWORKS.TESTNET.rpcUrl[0]}</span>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
+      <>
+        <div className="welcome-message">
+          <h3 className="welcome-title">Connect Your Wallet</h3>
+          <p className="welcome-subtitle">
+            {message}
+          </p>
         </div>
+
+        <div className="wallet-icon-wrapper">
+          <img src="/metamask.svg" alt="MetaMask" className="wallet-icon" />
+        </div>
+
+        <div className="connect-button-container">
+          <button
+            className={`connect-button ${isLoading ? "loading" : ""}`}
+            onClick={onConnect}
+            disabled={isLoading}
+          >
+            <span className="button-text">
+              {isLoading ? "Connecting..." : "Connect MetaMask"}
+            </span>
+            <div className="button-glow"></div>
+          </button>
+        </div>
+      </>
     );
+  };
+
+  return (
+    <div className="wallet-prompt">
+      <div className="nebula-particles">
+        <div className="particle p1"></div>
+        <div className="particle p2"></div>
+        <div className="particle p3"></div>
+        <div className="particle p4"></div>
+        <div className="particle p5"></div>
+        <div className="particle p6"></div>
+      </div>
+
+      <div className="wallet-prompt-content">
+        <div className="nebula-logo-container">
+          <div className="nebula-logo">N</div>
+        </div>
+        {renderContent()}
+      </div>
+    </div>
+  );
 };
 
 export default WalletPrompt;

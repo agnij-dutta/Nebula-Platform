@@ -15,6 +15,7 @@ import WalletPrompt from './components/WalletPrompt';
 import TokenSwap from './components/TokenSwap';
 import ErrorDisplay from './components/ErrorDisplay';
 import NetworkValidator from './components/NetworkValidator';
+import { NetworkSwitchOverlay } from './components/NetworkSwitchOverlay';
 import './App.css';
 import './styles/theme.css';
 
@@ -65,17 +66,26 @@ function App() {
         return (
             <Router>
                 <div className="App wallet-not-connected">
+                    <div className="stars-bg"></div>
                     <header className="App-header minimal">
                         <div className="header-content">
-                            <div className="logo">Nebula Platform</div>
+                            <div className="logo-container">
+                                <h1>Nebula Platform</h1>
+                            </div>
                         </div>
                     </header>
                     <main className="App-content">
-                        <WalletPrompt 
-                            message="Welcome to Nebula Platform! Connect your wallet to get started"
-                            onConnect={connectWallet}
-                            isLoading={isConnecting}
-                        />
+                        <div className="card-3d">
+                            <WalletPrompt 
+                                message="Welcome to Nebula Platform! Connect your wallet to get started"
+                                onConnect={() => connectWallet()}
+                                isLoading={isConnecting}
+                                isWrongNetwork={Boolean(isWrongNetwork)}
+                                chainId={chainId?.toString(16)}
+                                onSwitchNetwork={handleNetworkError}
+                                isNetworkSwitching={isNetworkSwitching}
+                            />
+                        </div>
                     </main>
                 </div>
             </Router>
@@ -87,36 +97,27 @@ function App() {
         return (
             <Router>
                 <div className="App network-switch-required">
+                    <div className="stars-bg"></div>
                     <header className="App-header minimal">
                         <div className="header-content">
-                            <div className="logo">Nebula Platform</div>
+                            <div className="logo-container">
+                                <h1>Nebula Platform</h1>
+                            </div>
                             <div className="wallet-section">
-                                <div className="wallet-controls">
-                                    <div
-                                        className={`address-container ${showDisconnect ? 'hover' : ''}`}
-                                        onMouseEnter={() => setShowDisconnect(true)}
-                                        onMouseLeave={() => setShowDisconnect(false)}
-                                    >
-                                        <span className="address">
-                                            {showDisconnect ? 'Disconnect' : `${account.slice(0, 6)}...${account.slice(-4)}`}
-                                        </span>
-                                        {showDisconnect && (
-                                            <button onClick={disconnectWallet} className="disconnect-button">
-                                                Disconnect
-                                            </button>
-                                        )}
+                                <div className="account-info">
+                                    <div className="wallet-status">
+                                        <div className="wallet-indicator"></div>
+                                        <span>Connected</span>
                                     </div>
+                                    <span className="address">
+                                        {`${account.slice(0, 6)}...${account.slice(-4)}`}
+                                    </span>
                                 </div>
                             </div>
                         </div>
                     </header>
                     <main className="App-content">
-                        <WalletPrompt 
-                            message={`Please switch to ${WEB3_CONFIG.NETWORKS.TESTNET.name} to continue`}
-                            onConnect={switchToFujiTestnet}
-                            isNetworkSwitching={isNetworkSwitching || isRetrying}
-                            isLoading={isNetworkSwitching || isRetrying}
-                        />
+                        <NetworkSwitchOverlay />
                     </main>
                 </div>
             </Router>
@@ -127,32 +128,65 @@ function App() {
         <Router>
             <NetworkValidator />
             <div className="space-theme space-scrollbar">
+                <div className="stars-bg"></div>
                 <div className="glass-effect">
                     <div className="App">
                         <header className="App-header">
                             <div className="header-content">
+                                <div className="logo-container">
+                                    <h1>Nebula Platform</h1>
+                                </div>
+
                                 <nav className="nav-links">
-                                    <Link to="/" className={activeView === 'browse' ? 'active' : ''}>
+                                    <Link 
+                                        to="/" 
+                                        className={activeView === 'browse' ? 'active' : ''}
+                                        onClick={() => setActiveView('browse')}
+                                    >
                                         Browse IP
                                     </Link>
-                                    <Link to="/research" className={activeView === 'research' ? 'active' : ''}>
+                                    <Link 
+                                        to="/research" 
+                                        className={activeView === 'research' ? 'active' : ''}
+                                        onClick={() => setActiveView('research')}
+                                    >
                                         The Hub
                                     </Link>
-                                    <Link to="/governance" className={activeView === 'governance' ? 'active' : ''}>
+                                    <Link 
+                                        to="/governance" 
+                                        className={activeView === 'governance' ? 'active' : ''}
+                                        onClick={() => setActiveView('governance')}
+                                    >
                                         Governance
                                     </Link>
-                                    <Link to="/staking" className={activeView === 'staking' ? 'active' : ''}>
+                                    <Link 
+                                        to="/staking" 
+                                        className={activeView === 'staking' ? 'active' : ''}
+                                        onClick={() => setActiveView('staking')}
+                                    >
                                         Stake
                                     </Link>
-                                    <Link to="/swap" className={activeView === 'swap' ? 'active' : ''}>
+                                    <Link 
+                                        to="/swap" 
+                                        className={activeView === 'swap' ? 'active' : ''}
+                                        onClick={() => setActiveView('swap')}
+                                    >
                                         Swap
                                     </Link>
                                     {account && (
                                         <>
-                                            <Link to="/create-ip" className={activeView === 'createIP' ? 'active' : ''}>
+                                            <Link 
+                                                to="/create-ip" 
+                                                className={activeView === 'createIP' ? 'active' : ''}
+                                                onClick={() => setActiveView('createIP')}
+                                            >
                                                 Create IP
                                             </Link>
-                                            <Link to="/dashboard" className={activeView === 'dashboard' ? 'active' : ''}>
+                                            <Link 
+                                                to="/dashboard" 
+                                                className={activeView === 'dashboard' ? 'active' : ''}
+                                                onClick={() => setActiveView('dashboard')}
+                                            >
                                                 Dashboard
                                             </Link>
                                         </>
@@ -173,21 +207,19 @@ function App() {
                                             )}
                                         </button>
                                     ) : (
-                                        <div className="wallet-controls">
-                                            <div
-                                                className={`address-container ${showDisconnect ? 'hover' : ''}`}
-                                                onMouseEnter={() => setShowDisconnect(true)}
-                                                onMouseLeave={() => setShowDisconnect(false)}
-                                            >
-                                                <span className="address">
-                                                    {showDisconnect ? 'Disconnect' : `${account.slice(0, 6)}...${account.slice(-4)}`}
-                                                </span>
-                                                {showDisconnect && (
-                                                    <button onClick={disconnectWallet} className="disconnect-button">
-                                                        Disconnect
-                                                    </button>
-                                                )}
+                                        <div 
+                                            className="account-info"
+                                            onMouseEnter={() => setShowDisconnect(true)}
+                                            onMouseLeave={() => setShowDisconnect(false)}
+                                            onClick={showDisconnect ? disconnectWallet : undefined}
+                                        >
+                                            <div className="wallet-status">
+                                                <div className="wallet-indicator"></div>
+                                                <span>{showDisconnect ? 'Disconnect' : 'Connected'}</span>
                                             </div>
+                                            <span className="address">
+                                                {`${account.slice(0, 6)}...${account.slice(-4)}`}
+                                            </span>
                                         </div>
                                     )}
                                 </div>
@@ -198,39 +230,70 @@ function App() {
                             <ErrorDisplay 
                                 message={globalError || web3Error}
                                 onRetry={isWrongNetwork ? handleNetworkError : undefined}
+                                isRetrying={isRetrying || isNetworkSwitching}
                             />
                         )}
-
-                        <main className="App-content">
-                            {isWrongNetwork ? (
-                                <WalletPrompt 
-                                    message={`Please switch to ${WEB3_CONFIG.NETWORKS.TESTNET.name} to continue`}
-                                    onConnect={handleNetworkError}
-                                    isNetworkSwitching={isNetworkSwitching || isRetrying}
-                                    isLoading={isNetworkSwitching || isRetrying}
+                        
+                        <main className="main-content">
+                            <Routes>
+                                <Route
+                                    path="/"
+                                    element={<ListingsContainer />}
                                 />
-                            ) : (
-                                <Routes>
-                                    <Route path="/" element={<ListingsContainer />} />
-                                    <Route path="/create-ip" element={<CreateIP onIPCreated={handleIPCreated} />} />
-                                    <Route 
-                                        path="/create-listing" 
-                                        element={
-                                            <CreateListing 
-                                                initialTokenId={createdTokenId} 
-                                                onListingCreated={handleListingCreated} 
-                                            />
-                                        } 
-                                    />
-                                    <Route path="/research" element={<ResearchHub />} />
-                                    <Route path="/create-research" element={<CreateResearchProject />} />
-                                    <Route path="/dashboard" element={<ResearcherDashboard />} />
-                                    <Route path="/project/:id" element={<ProjectDetails />} />
-                                    <Route path="/governance" element={<Governance />} />
-                                    <Route path="/staking" element={<Staking />} />
-                                    <Route path="/swap" element={<TokenSwap />} />
-                                </Routes>
-                            )}
+                                <Route 
+                                    path="/create-listing"
+                                    element={
+                                        <CreateListing
+                                            initialTokenId={createdTokenId}
+                                            onListingCreated={handleListingCreated}
+                                        />
+                                    }
+                                />
+                                <Route
+                                    path="/create-ip"
+                                    element={<CreateIP onTokenCreated={handleIPCreated} />}
+                                />
+                                <Route
+                                    path="/research"
+                                    element={<ResearchHub />}
+                                />
+                                <Route
+                                    path="/staking"
+                                    element={<Staking />}
+                                />
+                                <Route
+                                    path="/create-research"
+                                    element={<CreateResearchProject />}
+                                />
+                                <Route
+                                    path="/dashboard"
+                                    element={<ResearcherDashboard />}
+                                />
+                                <Route
+                                    path="/project/:id"
+                                    element={<ProjectDetails />}
+                                />
+                                <Route
+                                    path="/governance"
+                                    element={<Governance />}
+                                />
+                                <Route
+                                    path="/swap"
+                                    element={<TokenSwap />}
+                                />
+                                <Route
+                                    path="*"
+                                    element={
+                                        <div className="error card-3d">
+                                            <h2>Page Not Found</h2>
+                                            <p>The page you are looking for does not exist.</p>
+                                            <Link to="/" className="interactive-button">
+                                                Return Home
+                                            </Link>
+                                        </div>
+                                    }
+                                />
+                            </Routes>
                         </main>
                     </div>
                 </div>

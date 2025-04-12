@@ -5,11 +5,11 @@ import { IPTokenMetadata } from '../types/ipTokens';
 import WalletPrompt from './WalletPrompt';
 import './CreateIP.css';
 
-interface CreateIPProps {
-    onIPCreated: (tokenId: string) => void;
+export interface CreateIPProps {
+    onTokenCreated: (tokenId: string) => void;
 }
 
-const CreateIP: React.FC<CreateIPProps> = ({ onIPCreated }) => {
+const CreateIP: React.FC<CreateIPProps> = ({ onTokenCreated }) => {
     const { contractInterface, needsWallet, connectWallet, isConnecting } = useWeb3();
     
     // Basic on-chain data
@@ -108,7 +108,7 @@ const CreateIP: React.FC<CreateIPProps> = ({ onIPCreated }) => {
             setVersion('');
             
             // Notify parent
-            onIPCreated(tokenId);
+            onTokenCreated(tokenId);
         } catch (err: any) {
             let errorMessage = 'Could not create IP token';
             

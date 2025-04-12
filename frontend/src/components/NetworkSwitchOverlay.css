@@ -4,53 +4,76 @@
     left: 0;
     right: 0;
     bottom: 0;
-    background: rgba(45, 55, 72, 0.95);
-    backdrop-filter: blur(4px);
+    background: rgba(20, 20, 30, 0.95);
+    backdrop-filter: blur(8px);
     display: flex;
     align-items: center;
     justify-content: center;
     z-index: 1000;
     animation: fadeIn 0.3s ease-out;
+    color: #ffffff;
 }
 
 .network-switch-content {
-    background: white;
-    padding: 2rem;
-    border-radius: 16px;
-    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+    background: #1E1F2E;
+    padding: 2.5rem;
+    border-radius: 24px;
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3), 0 0 20px rgba(139, 92, 246, 0.15);
     width: 90%;
-    max-width: 480px;
+    max-width: 500px;
     animation: slideUp 0.4s ease-out;
+    border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
-.network-switch-content h2 {
+.network-header {
+    text-align: center;
+    margin-bottom: 2rem;
+}
+
+.network-header h2 {
     margin: 0 0 1rem;
     color: #ff4444;
+    font-size: 2rem;
+    font-weight: 700;
+    letter-spacing: -0.02em;
 }
 
-.network-status {
+.network-header p {
+    color: rgba(255, 255, 255, 0.8);
+    margin: 0;
+    line-height: 1.5;
+    font-size: 1rem;
+}
+
+.network-loading-indicator {
     display: flex;
-    align-items: center;
     justify-content: center;
-    gap: 0.75rem;
-    margin-bottom: 2rem;
-    padding: 1rem;
-    background: #fff5f5;
-    border-radius: 12px;
-    font-size: 1.25rem;
-    font-weight: 600;
-    color: #c53030;
+    align-items: center;
+    margin: 2rem 0;
+}
+
+.circle-loader {
+    width: 100px;
+    height: 100px;
+    border-radius: 50%;
+    border: 5px solid rgba(76, 175, 80, 0.2);
+    border-top-color: #4CAF50;
+    animation: spin 1.5s linear infinite;
+    position: relative;
 }
 
 .network-info {
-    display: flex;
-    flex-direction: column;
-    gap: 1rem;
     margin-bottom: 2rem;
+}
+
+.network-comparison {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 16px;
     padding: 1.5rem;
-    background: #f7fafc;
-    border-radius: 12px;
-    border: 1px solid #e2e8f0;
+    position: relative;
 }
 
 .current-network,
@@ -58,25 +81,48 @@
     display: flex;
     align-items: center;
     gap: 0.75rem;
-    padding: 0.75rem;
-    border-radius: 8px;
-    background: white;
+    flex: 1;
+}
+
+.network-details {
+    display: flex;
+    flex-direction: column;
+}
+
+.network-label {
+    font-size: 0.875rem;
+    color: rgba(255, 255, 255, 0.6);
     font-weight: 500;
 }
 
-.current-network {
-    color: #c53030;
-    border: 1px solid #feb2b2;
+.network-name {
+    font-size: 1rem;
+    font-weight: 600;
 }
 
-.required-network {
-    color: #2b6cb0;
-    border: 1px solid #90cdf4;
+.current-network .network-name {
+    color: #ff4444;
+}
+
+.required-network .network-name {
+    color: #4CAF50;
+}
+
+.divider {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0 1rem;
+}
+
+.divider-icon {
+    font-size: 1.5rem;
+    color: rgba(255, 255, 255, 0.4);
 }
 
 .network-indicator {
-    width: 10px;
-    height: 10px;
+    width: 12px;
+    height: 12px;
     border-radius: 50%;
     position: relative;
 }
@@ -84,34 +130,34 @@
 .network-indicator::after {
     content: '';
     position: absolute;
-    top: -2px;
-    left: -2px;
-    right: -2px;
-    bottom: -2px;
+    top: -4px;
+    left: -4px;
+    right: -4px;
+    bottom: -4px;
     border-radius: 50%;
-    animation: pulse-ring 1.5s cubic-bezier(0.215, 0.61, 0.355, 1) infinite;
+    animation: pulse-ring 2s cubic-bezier(0.215, 0.61, 0.355, 1) infinite;
 }
 
 .network-indicator.wrong-network {
-    background: #f56565;
+    background: #ff4444;
 }
 
 .network-indicator.wrong-network::after {
-    border: 2px solid rgba(245, 101, 101, 0.5);
+    border: 2px solid rgba(255, 68, 68, 0.3);
 }
 
-.required-network .network-indicator {
-    background: #48bb78;
+.network-indicator.correct-network {
+    background: #4CAF50;
 }
 
-.required-network .network-indicator::after {
-    border: 2px solid rgba(72, 187, 120, 0.5);
+.network-indicator.correct-network::after {
+    border: 2px solid rgba(76, 175, 80, 0.3);
 }
 
 .switch-button {
     width: 100%;
     padding: 1rem;
-    background: linear-gradient(90deg, #4299e1, #667eea);
+    background: linear-gradient(90deg, #8B5CF6, #6366F1);
     color: white;
     border: none;
     border-radius: 12px;
@@ -121,7 +167,8 @@
     transition: all 0.3s;
     position: relative;
     overflow: hidden;
-    margin-bottom: 1rem;
+    margin-bottom: 1.5rem;
+    letter-spacing: 0.02em;
 }
 
 .switch-button::before {
@@ -142,7 +189,7 @@
 
 .switch-button:hover:not(:disabled) {
     transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(66, 153, 225, 0.4);
+    box-shadow: 0 8px 20px rgba(139, 92, 246, 0.3);
 }
 
 .switch-button:hover::before {
@@ -150,7 +197,7 @@
 }
 
 .switch-button:disabled {
-    background: linear-gradient(90deg, #cbd5e0, #a0aec0);
+    background: linear-gradient(90deg, #4b5563, #6b7280);
     cursor: not-allowed;
     transform: none;
 }
@@ -174,34 +221,15 @@
     animation: spin 1s linear infinite;
 }
 
-.network-message {
+.manual-instructions {
     text-align: center;
-    color: #4a5568;
+}
+
+.manual-instructions p {
+    color: rgba(255, 255, 255, 0.6);
     font-size: 0.875rem;
     margin: 0;
-}
-
-.network-error-banner {
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    background: rgba(239, 68, 68, 0.95);
-    color: white;
-    padding: 1rem;
-    text-align: center;
-    z-index: 1000;
-    backdrop-filter: blur(4px);
-    animation: slideDown 0.3s ease-out;
-}
-
-.manual-switch-prompt {
-    font-size: 0.875rem;
-    margin-top: 0.5rem;
-    padding: 0.5rem;
-    background: rgba(255, 255, 255, 0.2);
-    border-radius: 4px;
-    display: inline-block;
+    line-height: 1.5;
 }
 
 @keyframes fadeIn {
@@ -212,7 +240,7 @@
 @keyframes slideUp {
     from {
         opacity: 0;
-        transform: translateY(20px);
+        transform: translateY(30px);
     }
     to {
         opacity: 1;
@@ -235,32 +263,28 @@
     to { transform: translate(-50%, -50%) rotate(360deg); }
 }
 
-@keyframes slideDown {
-    from {
-        transform: translateY(-100%);
-    }
-    to {
-        transform: translateY(0);
-    }
-}
-
 @media (max-width: 640px) {
     .network-switch-content {
         width: 95%;
         padding: 1.5rem;
     }
     
-    .network-status {
-        font-size: 1rem;
-        padding: 0.75rem;
+    .network-header h2 {
+        font-size: 1.75rem;
     }
     
-    .network-info {
-        padding: 1rem;
+    .network-comparison {
+        flex-direction: column;
+        gap: 1rem;
     }
     
-    .switch-button {
-        font-size: 1rem;
-        padding: 0.875rem;
+    .divider {
+        transform: rotate(90deg);
+        margin: 0.5rem 0;
+    }
+    
+    .circle-loader {
+        width: 80px;
+        height: 80px;
     }
 }

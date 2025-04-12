@@ -25,7 +25,10 @@ const MilestoneVerificationStatus: React.FC<Props> = ({
 
         try {
             // Get current verification status from contract
-            const verificationReport = await contractInterface.getVerificationDetails(projectId, milestoneId);
+            const verificationReport = await contractInterface.getVerificationDetails(
+                parseInt(projectId),
+                parseInt(milestoneId)
+            );
             setStatus(
                 verificationReport.status === 'VERIFIED' ? 'verified' :
                 verificationReport.status === 'FAILED' ? 'rejected' :

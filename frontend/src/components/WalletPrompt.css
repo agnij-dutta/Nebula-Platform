@@ -2,97 +2,282 @@
     display: flex;
     justify-content: center;
     align-items: center;
-    min-height: calc(100vh - 80px);
+    min-height: calc(100vh - 120px);
     padding: 2rem;
+    perspective: 1000px;
+    z-index: 10;
+    position: relative;
+}
+
+/* Animated particles background */
+.nebula-particles {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    z-index: -1;
+}
+
+.particle {
+    position: absolute;
+    background: radial-gradient(circle, rgba(139, 92, 246, 0.8) 0%, rgba(139, 92, 246, 0) 70%);
+    border-radius: 50%;
+    opacity: 0.4;
+    animation: float-particle 15s infinite ease-in-out;
+}
+
+.particle.p1 {
+    width: 150px;
+    height: 150px;
+    top: 10%;
+    left: 10%;
+    animation-delay: 0s;
+}
+
+.particle.p2 {
+    width: 100px;
+    height: 100px;
+    top: 60%;
+    left: 30%;
+    animation-delay: -5s;
+}
+
+.particle.p3 {
+    width: 200px;
+    height: 200px;
+    top: 30%;
+    left: 60%;
+    animation-delay: -10s;
+}
+
+.particle.p4 {
+    width: 120px;
+    height: 120px;
+    top: 70%;
+    left: 70%;
+    animation-delay: -2s;
+}
+
+.particle.p5 {
+    width: 180px;
+    height: 180px;
+    top: 40%;
+    left: 20%;
+    animation-delay: -7s;
+}
+
+.particle.p6 {
+    width: 160px;
+    height: 160px;
+    top: 20%;
+    left: 80%;
+    animation-delay: -3s;
+}
+
+@keyframes float-particle {
+    0%, 100% {
+        transform: translateY(0) translateX(0);
+        opacity: 0.4;
+    }
+    25% {
+        transform: translateY(-30px) translateX(20px);
+        opacity: 0.6;
+    }
+    50% {
+        transform: translateY(20px) translateX(-20px);
+        opacity: 0.2;
+    }
+    75% {
+        transform: translateY(30px) translateX(25px);
+        opacity: 0.5;
+    }
 }
 
 .wallet-prompt-content {
-    background: var(--glass-bg);
-    backdrop-filter: blur(10px);
-    border: 1px solid var(--glass-border);
-    border-radius: 24px;
+    background: rgba(30, 31, 46, 0.7);
+    backdrop-filter: blur(20px);
+    border: 1px solid rgba(139, 92, 246, 0.3);
+    border-radius: var(--border-radius-lg);
     padding: 3rem;
     text-align: center;
-    max-width: 480px;
+    max-width: 500px;
     width: 100%;
     position: relative;
     overflow: hidden;
-    animation: float 6s ease-in-out infinite;
+    transform-style: preserve-3d;
+    transform: translateZ(0) rotateX(3deg);
+    box-shadow: 
+        0 20px 40px rgba(0, 0, 0, 0.3),
+        0 0 30px rgba(139, 92, 246, 0.2),
+        inset 0 0 10px rgba(139, 92, 246, 0.05);
+    transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
 }
 
-.wallet-icon-wrapper {
-    background: linear-gradient(135deg, rgba(139, 92, 246, 0.1), rgba(224, 231, 255, 0.1));
-    width: 100px;
-    height: 100px;
+.wallet-prompt-content::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, transparent, rgba(139, 92, 246, 0.7), transparent);
+    z-index: 1;
+}
+
+.wallet-prompt-content::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, transparent, rgba(99, 102, 241, 0.7), transparent);
+    z-index: 1;
+}
+
+.wallet-prompt-content:hover {
+    transform: translateZ(20px) rotateX(1deg);
+    box-shadow: 
+        0 30px 60px rgba(0, 0, 0, 0.4),
+        0 0 40px rgba(139, 92, 246, 0.3),
+        inset 0 0 15px rgba(139, 92, 246, 0.1);
+}
+
+/* Glowing Nebula logo */
+.nebula-logo-container {
+    display: flex;
+    justify-content: center;
+    margin-bottom: 2rem;
+    position: relative;
+    z-index: 2;
+}
+
+.nebula-logo {
+    width: 80px;
+    height: 80px;
     border-radius: 50%;
+    background: linear-gradient(135deg, var(--primary), var(--secondary));
     display: flex;
     align-items: center;
     justify-content: center;
-    margin: 0 auto 2rem;
-    padding: 1.5rem;
-    transition: transform 0.3s ease;
-    border: 1px solid var(--glass-border);
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 2.5rem;
+    font-weight: 700;
+    color: white;
+    position: relative;
+    box-shadow: 
+        0 0 20px rgba(139, 92, 246, 0.5),
+        0 0 40px rgba(99, 102, 241, 0.3);
+    animation: pulse 3s infinite ease-in-out;
 }
 
-.wallet-icon-wrapper:hover {
-    transform: scale(1.05);
+.nebula-logo::before {
+    content: '';
+    position: absolute;
+    top: -10px;
+    left: -10px;
+    right: -10px;
+    bottom: -10px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, rgba(139, 92, 246, 0.3), rgba(99, 102, 241, 0.3));
+    z-index: -1;
+    animation: rotating 10s linear infinite;
 }
 
-.wallet-icon-wrapper.spin {
-    animation: rotate 2s linear infinite;
+.nebula-logo::after {
+    content: '';
+    position: absolute;
+    top: -5px;
+    left: -5px;
+    right: -5px;
+    bottom: -5px;
+    border-radius: 50%;
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    z-index: -1;
 }
 
-.wallet-icon {
-    width: 100%;
-    height: 100%;
-    object-fit: contain;
+@keyframes rotating {
+    from {
+        transform: rotate(0deg);
+    }
+    to {
+        transform: rotate(360deg);
+    }
 }
 
-.wallet-prompt h3 {
-    color: rgb(var(--foreground-rgb));
-    font-size: 1.5rem;
-    margin-bottom: 1.5rem;
-    font-weight: 600;
-    line-height: 1.4;
-    background: linear-gradient(45deg, #8B5CF6, #E0E7FF);
+.welcome-message {
+    margin-bottom: 2rem;
+    transform-style: preserve-3d;
+}
+
+.welcome-title {
+    font-size: 2rem;
+    font-weight: 700;
+    margin-bottom: 0.5rem;
+    background: linear-gradient(45deg, var(--primary), var(--secondary));
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
+    background-clip: text;
+    position: relative;
+    display: inline-block;
+    text-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
 }
 
-.install-prompt {
-    margin: 1.5rem 0;
-    padding: 1.5rem;
-    background: rgba(139, 92, 246, 0.1);
-    border-radius: 12px;
-    border: 1px solid rgba(139, 92, 246, 0.2);
+.welcome-subtitle {
+    color: rgba(255, 255, 255, 0.8);
+    font-size: 1.1rem;
+    margin-top: 0;
 }
 
-.install-prompt p {
-    margin: 0;
-    color: #4B5563;
-}
-
-.install-prompt .install-description {
-    font-size: 0.9rem;
-    margin-top: 0.5rem;
-    color: #6B7280;
+.connect-button-container {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    margin: 2rem 0;
+    transform-style: preserve-3d;
 }
 
 .connect-button {
-    background: linear-gradient(45deg, #8B5CF6, #E0E7FF);
+    background: linear-gradient(45deg, var(--primary), var(--secondary));
     color: white;
     border: none;
     padding: 1rem 2.5rem;
-    border-radius: 12px;
+    border-radius: var(--border-radius-md);
     font-size: 1.1rem;
-    font-weight: 500;
+    font-weight: 600;
     cursor: pointer;
-    transition: all 0.2s ease;
     position: relative;
     overflow: hidden;
-    margin: 1.5rem 0;
     width: 100%;
     max-width: 280px;
+    transform-style: preserve-3d;
+    transform: translateZ(0);
+    box-shadow: 
+        0 10px 20px rgba(0, 0, 0, 0.2),
+        0 0 15px rgba(139, 92, 246, 0.3);
+    transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+    z-index: 1;
+}
+
+.button-text {
+    position: relative;
+    z-index: 2;
+}
+
+.button-glow {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(45deg, var(--primary), var(--secondary));
+    filter: blur(20px);
+    opacity: 0.5;
+    transform: translateZ(-10px);
+    transition: all 0.3s ease;
 }
 
 .connect-button::before {
@@ -109,25 +294,33 @@
         transparent
     );
     transition: 0.5s;
+    z-index: 1;
+}
+
+.connect-button:hover {
+    transform: translateY(-5px) translateZ(10px);
+    box-shadow: 
+        0 15px 30px rgba(0, 0, 0, 0.3),
+        0 0 20px rgba(139, 92, 246, 0.5);
+}
+
+.connect-button:hover .button-glow {
+    opacity: 0.7;
+    filter: blur(25px);
 }
 
 .connect-button:hover::before {
     left: 100%;
 }
 
-.connect-button:hover:not(:disabled) {
-    transform: translateY(-2px);
-    box-shadow: 0 4px 12px var(--glow-shadow);
-}
-
-.connect-button:active:not(:disabled) {
-    transform: translateY(0);
+.connect-button:active {
+    transform: translateY(-2px) translateZ(5px);
 }
 
 .connect-button:disabled {
-    background: linear-gradient(45deg, #818cf8, #a78bfa);
-    cursor: wait;
-    opacity: 0.7;
+    background: linear-gradient(45deg, #4b5563, #6b7280);
+    cursor: not-allowed;
+    transform: none;
 }
 
 .connect-button.loading {
@@ -140,160 +333,278 @@
     left: 50%;
     top: 50%;
     transform: translate(-50%, -50%);
-    width: 20px;
-    height: 20px;
-    border: 2px solid rgba(255, 255, 255, 0.3);
-    border-top-color: white;
+    width: 24px;
+    height: 24px;
+    border: 3px solid rgba(255, 255, 255, 0.3);
     border-radius: 50%;
-    animation: spin 0.8s linear infinite;
+    border-top-color: white;
+    animation: spin 1s linear infinite;
+    z-index: 3;
 }
 
-.network-info {
-    margin-top: 2rem;
-    padding-top: 1.5rem;
-    border-top: 1px solid rgba(139, 92, 246, 0.2);
+.wallet-icon-wrapper {
+    background: rgba(30, 31, 46, 0.8);
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 1.5rem auto;
+    padding: 1.2rem;
+    border: 1px solid rgba(139, 92, 246, 0.3);
+    box-shadow: 
+        0 10px 20px rgba(0, 0, 0, 0.2),
+        0 0 15px rgba(139, 92, 246, 0.2);
+    position: relative;
+    overflow: hidden;
+    transform-style: preserve-3d;
+    transform: translateZ(5px);
+    transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
 }
 
-.network-info .title {
-    font-weight: 500;
-    color: #6B7280;
-    margin-bottom: 0.75rem;
+.wallet-icon-wrapper::before {
+    content: '';
+    position: absolute;
+    inset: -5px;
+    background: conic-gradient(
+        transparent, 
+        rgba(139, 92, 246, 0.5), 
+        rgba(99, 102, 241, 0.5), 
+        transparent
+    );
+    opacity: 0.5;
+    animation: rotate 4s linear infinite;
+}
+
+.wallet-icon-wrapper::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: rgba(30, 31, 46, 0.8);
+    border-radius: 50%;
+    margin: 2px;
+    z-index: 0;
+}
+
+.wallet-icon-wrapper:hover {
+    transform: translateZ(15px) scale(1.05);
+    box-shadow: 
+        0 15px 30px rgba(0, 0, 0, 0.3),
+        0 0 20px rgba(139, 92, 246, 0.4);
+}
+
+.wallet-icon-wrapper.spin {
+    animation: rotate 3s linear infinite;
+}
+
+.wallet-icon {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    position: relative;
+    z-index: 1;
+}
+
+.network-card {
+    background: rgba(20, 21, 36, 0.6);
+    border-radius: var(--border-radius-md);
+    border: 1px solid rgba(139, 92, 246, 0.2);
+    overflow: hidden;
+    margin-top: 1.5rem;
+    transform-style: preserve-3d;
+    transform: translateZ(0);
+    box-shadow: 
+        0 10px 20px rgba(0, 0, 0, 0.2),
+        0 0 10px rgba(139, 92, 246, 0.1);
+    transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+}
+
+.network-card:hover {
+    transform: translateZ(5px);
+    box-shadow: 
+        0 15px 30px rgba(0, 0, 0, 0.3),
+        0 0 15px rgba(139, 92, 246, 0.2);
+}
+
+.network-header {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    background: rgba(30, 31, 46, 0.95);
+    padding: 1rem;
+    border-bottom: 1px solid rgba(139, 92, 246, 0.2);
+}
+
+.network-indicator {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: var(--success);
+    position: relative;
+}
+
+.network-indicator::after {
+    content: '';
+    position: absolute;
+    inset: -3px;
+    border-radius: 50%;
+    border: 2px solid rgba(76, 175, 80, 0.2);
+    animation: pulse-ring 2s cubic-bezier(0.215, 0.61, 0.355, 1) infinite;
+}
+
+.network-title {
     font-size: 0.9rem;
+    font-weight: 600;
+    color: rgba(255, 255, 255, 0.8);
+}
+
+.network-content {
+    padding: 1.5rem;
 }
 
 .network-name {
-    display: inline-flex;
-    align-items: center;
-    background: rgba(99, 102, 241, 0.1);
-    color: #6366f1;
-    padding: 0.5rem 1rem;
-    border-radius: 9999px;
-    font-size: 0.9rem;
-    font-weight: 500;
-    margin: 0.5rem 0;
-    border: 1px solid rgba(99, 102, 241, 0.2);
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: var(--primary);
+    margin-bottom: 1rem;
+    position: relative;
+    display: inline-block;
 }
 
-.network-name::before {
+.network-name::after {
     content: '';
-    display: inline-block;
-    width: 8px;
-    height: 8px;
-    background-color: #6366f1;
-    border-radius: 50%;
-    margin-right: 0.5rem;
+    position: absolute;
+    bottom: -5px;
+    left: 0;
+    width: 100%;
+    height: 2px;
+    background: linear-gradient(90deg, transparent, var(--primary), transparent);
 }
 
 .network-details {
-    background: rgba(255, 255, 255, 0.5);
-    border-radius: 12px;
-    padding: 1rem;
-    margin-top: 1rem;
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 0.75rem;
     text-align: left;
-    font-size: 0.8rem;
-    border: 1px solid rgba(99, 102, 241, 0.1);
 }
 
-.network-details div {
-    color: #6B7280;
-    margin: 0.25rem 0;
-    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-}
-
-.error-message {
-    background: rgba(239, 68, 68, 0.1);
-    color: #DC2626;
-    padding: 1rem;
-    border-radius: 8px;
-    margin: 1rem 0;
-    font-size: 0.9rem;
-    border: 1px solid rgba(239, 68, 68, 0.2);
-}
-
-.install-button {
-    background: #ef4444;
-    color: white;
-    border: none;
-    padding: 0.5rem 1rem;
-    border-radius: 8px;
-    font-size: 0.9rem;
-    font-weight: 500;
-    cursor: pointer;
-    transition: all 0.2s ease;
-    text-decoration: none;
-    display: inline-flex;
+.network-detail {
+    display: flex;
     align-items: center;
     gap: 0.5rem;
 }
 
-.install-button:hover {
-    background: #dc2626;
-    transform: translateY(-1px);
+.detail-label {
+    color: rgba(255, 255, 255, 0.6);
+    font-size: 0.85rem;
+    width: 80px;
 }
 
-.install-button::after {
-    content: '↗';
-    font-size: 1.1em;
+.detail-value {
+    color: rgba(255, 255, 255, 0.9);
+    font-size: 0.85rem;
+    font-family: var(--font-mono);
+    background: rgba(139, 92, 246, 0.1);
+    padding: 0.25rem 0.5rem;
+    border-radius: var(--border-radius-sm);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    max-width: 200px;
+}
+
+.error-message {
+    background: rgba(255, 68, 68, 0.1);
+    border: 1px solid rgba(255, 68, 68, 0.3);
+    color: var(--error);
+    padding: 1rem;
+    border-radius: var(--border-radius-sm);
+    margin: 1rem 0;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.error-icon {
+    font-size: 1.2rem;
+}
+
+.install-prompt {
+    background: rgba(139, 92, 246, 0.1);
+    border: 1px solid rgba(139, 92, 246, 0.2);
+    border-radius: var(--border-radius-sm);
+    padding: 1.5rem;
+    margin: 1.5rem 0;
+}
+
+.install-icon {
+    font-size: 1.5rem;
+    margin-bottom: 0.5rem;
+}
+
+@keyframes pulse {
+    0%, 100% {
+        opacity: 1;
+        transform: scale(1);
+    }
+    50% {
+        opacity: 0.8;
+        transform: scale(0.98);
+    }
 }
 
 @keyframes rotate {
-    from {
-        transform: rotate(0deg);
-    }
-    to {
-        transform: rotate(360deg);
-    }
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
 }
 
 @keyframes spin {
-    to {
-        transform: translate(-50%, -50%) rotate(360deg);
-    }
+    to { transform: translate(-50%, -50%) rotate(360deg); }
 }
 
-@keyframes shimmer {
+@keyframes pulse-ring {
     0% {
-        background-position: -1000px 0;
+        transform: scale(0.8);
+        opacity: 0.8;
     }
     100% {
-        background-position: 1000px 0;
+        transform: scale(1.5);
+        opacity: 0;
     }
-}
-
-@keyframes float {
-    0%, 100% { transform: translateY(0); }
-    50% { transform: translateY(-10px); }
-}
-
-.welcome-text {
-    background: linear-gradient(45deg, #8B5CF6, #E0E7FF);
-    background-clip: text;
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    font-size: 2rem;
-    margin-bottom: 1.5rem;
 }
 
 @media (max-width: 640px) {
     .wallet-prompt {
         padding: 1rem;
+        min-height: calc(100vh - 150px);
     }
     
     .wallet-prompt-content {
-        padding: 2rem;
+        padding: 2rem 1.5rem;
+        max-width: 100%;
     }
     
-    .wallet-icon-wrapper {
-        width: 80px;
-        height: 80px;
+    .nebula-logo {
+        width: 70px;
+        height: 70px;
+        font-size: 2rem;
     }
     
-    .wallet-prompt h3 {
-        font-size: 1.25rem;
+    .welcome-title {
+        font-size: 1.75rem;
     }
     
     .connect-button {
+        padding: 0.875rem 1.5rem;
         font-size: 1rem;
-        padding: 0.875rem 2rem;
+    }
+    
+    .network-details {
+        gap: 0.5rem;
+    }
+    
+    .detail-value {
+        max-width: 150px;
     }
 }

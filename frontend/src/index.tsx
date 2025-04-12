@@ -1,5 +1,7 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
+import { Toaster } from 'react-hot-toast';
+import { MetaMaskProvider } from './web3/providers/MetaMaskProvider';
 import './index.css';
 import App from './App';
 import reportWebVitals from './reportWebVitals';
@@ -9,7 +11,10 @@ const root = ReactDOM.createRoot(
 );
 root.render(
   <React.StrictMode>
-    <App />
+    <MetaMaskProvider>
+      <Toaster position="top-right" />
+      <App />
+    </MetaMaskProvider>
   </React.StrictMode>
 );
 

@@ -1,0 +1,94 @@
+.network-error-container {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    z-index: 900;
+    max-width: 380px;
+    animation: slideInRight 0.3s ease-out;
+}
+
+.network-error-content {
+    background: var(--card-bg);
+    border: 1px solid var(--glass-border);
+    border-left: 4px solid var(--error);
+    border-radius: var(--border-radius-sm);
+    box-shadow: var(--box-shadow);
+    padding: var(--spacing-md) var(--spacing-lg);
+    display: flex;
+    align-items: flex-start;
+    gap: var(--spacing-md);
+}
+
+.network-error-icon {
+    color: var(--error);
+    width: 30px;
+    height: 30px;
+    flex-shrink: 0;
+    margin-top: 3px;
+}
+
+.network-error-message {
+    flex: 1;
+}
+
+.network-error-message h3 {
+    margin: 0 0 var(--spacing-xs);
+    font-size: 1rem;
+    font-weight: 600;
+    color: white;
+}
+
+.network-error-message p {
+    margin: 0 0 var(--spacing-sm);
+    font-size: 0.875rem;
+    color: rgba(255, 255, 255, 0.8);
+    line-height: 1.5;
+}
+
+.network-retry-progress {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-sm);
+    margin-top: var(--spacing-sm);
+    font-size: 0.875rem;
+    color: rgba(255, 255, 255, 0.6);
+}
+
+.retry-spinner {
+    width: 16px;
+    height: 16px;
+    border: 2px solid rgba(255, 255, 255, 0.2);
+    border-top-color: white;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+.retry-button {
+    background: transparent;
+    border: 1px solid var(--primary);
+    color: var(--primary);
+    padding: var(--spacing-xs) var(--spacing-md);
+    border-radius: var(--border-radius-sm);
+    font-size: 0.875rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all var(--transition-medium);
+    margin-top: var(--spacing-sm);
+}
+
+.retry-button:hover {
+    background: rgba(139, 92, 246, 0.1);
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+@media (max-width: 640px) {
+    .network-error-container {
+        bottom: 10px;
+        right: 10px;
+        left: 10px;
+        max-width: none;
+    }
+} 

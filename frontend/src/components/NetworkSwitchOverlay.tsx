@@ -21,21 +21,36 @@ export const NetworkSwitchOverlay: React.FC = () => {
     return (
         <div className="network-switch-overlay">
             <div className="network-switch-content">
-                <div className="network-status">
-                    <div className={`network-indicator ${chainId ? 'wrong-network' : ''}`} />
-                    <span>Wrong Network</span>
+                <div className="network-header">
+                    <h2>Wrong Network</h2>
+                    <p>It seems that you are connecting to an unsupported network. Please change network on your wallet to Avalanche Fuji Testnet</p>
+                </div>
+                
+                <div className="network-loading-indicator">
+                    <div className="circle-loader"></div>
                 </div>
                 
                 <div className="network-info">
-                    {chainId && (
+                    <div className="network-comparison">
                         <div className="current-network">
-                            <div className="network-indicator wrong-network" />
-                            <span>Current: Unknown Network ({chainId})</span>
+                            <div className="network-indicator wrong-network"></div>
+                            <div className="network-details">
+                                <span className="network-label">Current</span>
+                                <span className="network-name">{chainId ? `Unknown Network (${chainId})` : 'Not Connected'}</span>
+                            </div>
                         </div>
-                    )}
-                    <div className="required-network">
-                        <div className="network-indicator" />
-                        <span>Required: {WEB3_CONFIG.NETWORKS.TESTNET.name}</span>
+                        
+                        <div className="divider">
+                            <span className="divider-icon">→</span>
+                        </div>
+                        
+                        <div className="required-network">
+                            <div className="network-indicator correct-network"></div>
+                            <div className="network-details">
+                                <span className="network-label">Required</span>
+                                <span className="network-name">{WEB3_CONFIG.NETWORKS.TESTNET.name}</span>
+                            </div>
+                        </div>
                     </div>
                 </div>
 
@@ -44,12 +59,12 @@ export const NetworkSwitchOverlay: React.FC = () => {
                     disabled={isNetworkSwitching}
                     className={`switch-button ${isNetworkSwitching ? 'loading' : ''}`}
                 >
-                    {isNetworkSwitching ? 'Switching Network...' : 'Switch Network'}
+                    {isNetworkSwitching ? 'Switching...' : 'Switch Network'}
                 </button>
 
-                <p className="network-message">
-                    Please switch your network to {WEB3_CONFIG.NETWORKS.TESTNET.name} to use the application.
-                </p>
+                <div className="manual-instructions">
+                    <p>If the automatic switch doesn't work, please manually change your network in MetaMask to {WEB3_CONFIG.NETWORKS.TESTNET.name}.</p>
+                </div>
             </div>
         </div>
     );

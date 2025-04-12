@@ -55,24 +55,10 @@ interface DisputeDetails {
     proposalId: string;
 }
 
-interface VerificationReport {
-    status: 'PENDING' | 'VERIFIED' | 'FAILED' | 'DISPUTED';
-    verificationMethod: string;
-    timestamp: number;
-    proofHash: string;
-    verifierSignature: string;
-    confidenceScore: number;
-    metricResults: {
-        accuracy?: number;
-        completeness?: number;
-        timeliness?: number;
-        methodology?: string;
-    };
-    auditTrail: {
-        checkpoints: string[];
-        timestamps: number[];
-        verifierNodes: string[];
-    };
+interface VerificationDetails {
+    status: string;
+    timestamp: Date;
+    verifier: string;
 }
 
 interface VerificationRequest {
@@ -836,29 +822,30 @@ export class ContractInterface {
         }
     }
 
-    async getVerificationDetails(projectId: string, milestoneId: string): Promise<VerificationReport> {
-        const oracle = await this.getMilestoneOracle();
-        const details = await oracle.getDetailedVerification(projectId, milestoneId);
-        
-        return {
-            status: this.mapVerificationStatus(details.status),
-            verificationMethod: details.verificationMethod,
-            timestamp: details.timestamp.toNumber(),
-            proofHash: details.proofHash,
-            verifierSignature: details.verifierSignature,
-            confidenceScore: details.confidenceScore.toNumber() / 100,
-            metricResults: {
-                accuracy: details.metricResults.accuracy.toNumber() / 100,
-                completeness: details.metricResults.completeness.toNumber() / 100,
-                timeliness: details.metricResults.timeliness.toNumber() / 100,
-                methodology: details.metricResults.methodology
-            },
-            auditTrail: {
-                checkpoints: details.auditTrail.checkpoints,
-                timestamps: details.auditTrail.timestamps.map((t: ethers.BigNumber) => t.toNumber()),
-                verifierNodes: details.auditTrail.verifierNodes
-            }
-        };
+    async requestVerification(projectId: number, milestoneId: number) {
+        try {
+            const oracle = await this.getMilestoneOracle();
+            const tx = await oracle.contract.requestVerification(projectId, milestoneId);
+            return tx.wait();
+        } catch (error: any) {
+            console.error('Verification request failed:', error);
+            throw new Error(error.message || 'Failed to request verification');
+        }
+    }
+
+    async getVerificationDetails(projectId: number, milestoneId: number): Promise<VerificationDetails> {
+        try {
+            const oracle = await this.getMilestoneOracle();
+            const details = await oracle.contract.getVerificationDetails(projectId, milestoneId);
+            return {
+                status: details.status,
+                timestamp: new Date(details.timestamp.toNumber() * 1000),
+                verifier: details.verifier
+            };
+        } catch (error: any) {
+            console.error('Failed to get verification details:', error);
+            throw new Error(error.message || 'Failed to get verification details');
+        }
     }
 
     async requestMilestoneVerification(request: VerificationRequest) {
@@ -1149,11 +1136,24 @@ export class ContractInterface {
     }
 
     async purchaseListing(listingId: number, price: string) {
-        const marketplace = await this.getIPMarketplace();
-        const tx = await marketplace.purchaseListing(listingId, {
-            value: ethers.utils.parseEther(price)
-        });
-        return tx.wait();
+        try {
+            const marketplace = await this.getIPMarketplace();
+            const listing = await marketplace.getListing(listingId);
+            
+            if (!listing.isActive) {
+                throw new Error('Listing is not active');
+            }
+            
+            const tx = await marketplace.purchaseListing(listingId, {
+                value: ethers.utils.parseEther(price)
+            });
+            
+            const receipt = await tx.wait();
+            return receipt;
+        } catch (error: any) {
+            console.error('Purchase failed:', error);
+            throw new Error(error.message || 'Failed to purchase listing');
+        }
     }
 
     private isNetworkError(error: any): boolean {

@@ -4,14 +4,14 @@ import { useWeb3 } from '../web3/hooks/useWeb3';
 import OwnedTokens from './OwnedTokens';
 import './CreateListing.css';
 
-interface CreateListingProps {
+export interface CreateListingProps {
     onListingCreated: () => void;
     initialTokenId?: string | null;
 }
 
 const CreateListing: React.FC<CreateListingProps> = ({ onListingCreated, initialTokenId }) => {
     const { contractInterface, account } = useWeb3();
-    const [tokenId, setTokenId] = useState('');
+    const [tokenId, setTokenId] = useState(initialTokenId || '');
     const [price, setPrice] = useState('');
     const [isLicense, setIsLicense] = useState(false);
     const [licenseDuration, setLicenseDuration] = useState('30'); // Default 30 days
