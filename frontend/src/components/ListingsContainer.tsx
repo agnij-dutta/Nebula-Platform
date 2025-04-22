@@ -100,13 +100,31 @@ const ListingsContainer: React.FC = () => {
     const handlePurchase = async (tokenId: string, price: string) => {
         if (!contractInterface || !account) return;
         
+        setIsPurchasing(true);
+        setPurchasingId(tokenId);
+        setError('');
+        
         try {
-            setIsPurchasing(true);
-            setPurchasingId(tokenId);
-            setError(null);
+            const provider = contractInterface.provider;
             
-            // First check if we have enough balance
-            const provider = await contractInterface.provider;
+            // Check if listing is still active by getting the listing details
+            try {
+                const marketplace = await contractInterface.getIPMarketplace();
+                const listing = await marketplace.getListing(parseInt(tokenId));
+                
+                if (!listing.isActive) {
+                    // Refresh the listings to show updated status
+                    await loadListings();
+                    throw new Error('This listing is no longer available. The page has been refreshed.');
+                }
+            } catch (err: any) {
+                console.error('Failed to check listing status:', err);
+                // Refresh the listings to ensure we have the latest state
+                await loadListings();
+                throw new Error('Unable to verify listing status. The page has been refreshed.');
+            }
+            
+            // Check user's balance
             const balance = await provider.getBalance(account);
             const priceWei = ethers.utils.parseEther(price);
             
@@ -116,6 +134,9 @@ const ListingsContainer: React.FC = () => {
             
             // Execute the purchase
             await contractInterface.purchaseListing(parseInt(tokenId), price);
+            
+            // Show success message
+            setError('');
             
             // Refresh the listings
             setCurrentPage(0);

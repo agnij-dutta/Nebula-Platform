@@ -364,3 +364,36 @@
         opacity: 0;
     }
 }
+
+.swap-direction-toggle {
+    display: flex;
+    justify-content: center;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+}
+
+.swap-direction-toggle button {
+    padding: 0.5rem 1rem;
+    border: 2px solid var(--primary-color);
+    border-radius: 0.5rem;
+    background: transparent;
+    color: var(--primary-color);
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.swap-direction-toggle button:hover:not(:disabled) {
+    background: var(--primary-color);
+    color: white;
+}
+
+.swap-direction-toggle button.active {
+    background: var(--primary-color);
+    color: white;
+}
+
+.swap-direction-toggle button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}

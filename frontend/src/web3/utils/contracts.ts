@@ -59,6 +59,8 @@ interface VerificationDetails {
     status: string;
     timestamp: Date;
     verifier: string;
+    attempts?: number;
+    proofCID?: string;
 }
 
 interface VerificationRequest {
@@ -284,25 +286,33 @@ const MAX_BLOCK_RANGE = 2000; // Slightly under Fuji's 2048 limit for safety
 
 export class ContractInterface {
     public readonly provider: ethers.providers.Web3Provider;
-    private signer: ethers.Signer;
+    private signer: ethers.Signer | undefined;
     private contracts: Map<string, BaseContract> = new Map();
     private fallbackProviders: ethers.providers.JsonRpcProvider[] = [];
     
     constructor(provider: ethers.providers.Web3Provider) {
-        // Initialize main provider with permissive configuration
-        this.provider = new ethers.providers.Web3Provider(
-            provider.provider as ethers.providers.ExternalProvider,
-            {
-                name: WEB3_CONFIG.NETWORKS.TESTNET.name,
-                chainId: WEB3_CONFIG.NETWORKS.TESTNET.chainId,
-                ensAddress: undefined
-            }
-        );
-        
-        // Initialize fallback RPC providers
-        this.initializeFallbackProviders();
-        
+        this.provider = provider;
+        this.initializeSigner();
+    }
+
+    private async initializeSigner() {
+        try {
         this.signer = this.provider.getSigner();
+        } catch (error) {
+            console.warn('Failed to initialize signer:', error);
+            this.signer = undefined;
+        }
+    }
+
+    getProvider(): ethers.providers.Web3Provider {
+        return this.provider;
+    }
+
+    getSigner(): ethers.Signer {
+        if (!this.signer) {
+            throw new Error('No signer available');
+        }
+        return this.signer;
     }
 
     private initializeFallbackProviders() {
@@ -433,7 +443,16 @@ export class ContractInterface {
     }
 
     async getMilestoneOracle() {
-        return (await this.getContract('MilestoneOracle', MilestoneOracleABI.abi)).contract;
+        try {
+            const oracle = await this.getContract('MilestoneOracle', MilestoneOracleABI.abi);
+            if (!oracle || !oracle.contract) {
+                throw new Error('Failed to initialize oracle contract');
+            }
+            return oracle;
+        } catch (error: any) {
+            console.error('Failed to get milestone oracle:', error);
+            throw new Error('Failed to connect to milestone oracle contract');
+        }
     }
 
     async getFundingEscrow() {
@@ -836,11 +855,16 @@ export class ContractInterface {
     async getVerificationDetails(projectId: number, milestoneId: number): Promise<VerificationDetails> {
         try {
             const oracle = await this.getMilestoneOracle();
-            const details = await oracle.contract.getVerificationDetails(projectId, milestoneId);
+            if (!oracle || !oracle.contract) {
+                throw new Error('Oracle contract not initialized');
+            }
+            const [isProcessing, isVerified, attempts, proofCID, timestamp] = await oracle.contract.getLatestVerification(projectId, milestoneId);
             return {
-                status: details.status,
-                timestamp: new Date(details.timestamp.toNumber() * 1000),
-                verifier: details.verifier
+                status: isProcessing ? 'PENDING' : (isVerified ? 'VERIFIED' : 'FAILED'),
+                timestamp: new Date(timestamp.toNumber() * 1000),
+                verifier: '', // This information is not available in the current contract
+                attempts: attempts, // attempts is already a number, no need for toNumber()
+                proofCID
             };
         } catch (error: any) {
             console.error('Failed to get verification details:', error);
@@ -849,26 +873,37 @@ export class ContractInterface {
     }
 
     async requestMilestoneVerification(request: VerificationRequest) {
-        const oracle = await this.getMilestoneOracle();
-        
-        // Prepare verification request with enhanced parameters
-        const tx = await oracle.requestDetailedVerification({
-            projectId: request.projectId,
-            milestoneId: request.milestoneId,
-            proofCID: request.proofCID,
-            verificationCID: request.verificationCID,
-            verificationMethods: request.verificationMethods,
-            requiredConfidence: Math.floor(request.requiredConfidence * 100), // Convert to basis points
-            deadline: request.deadline,
-            customParams: request.customParams || {}
-        });
+        try {
+            const oracle = await this.getMilestoneOracle();
+            if (!oracle || !oracle.contract) {
+                throw new Error('Oracle contract not initialized');
+            }
+            
+            // Prepare verification request with all required arguments
+            const tx = await oracle.contract.requestVerification(
+                request.projectId,
+                request.milestoneId,
+                request.proofCID,
+                request.verificationCID || '', // Required but can be empty if not used
+                request.verificationMethods || [], // Required but can be empty if not used
+                request.deadline || Math.floor(Date.now() / 1000) + 86400 // Default to 24 hours from now
+            );
 
-        return tx.wait();
+            return tx.wait();
+        } catch (error: any) {
+            console.error('Verification request failed:', error);
+            throw new Error(error.message || 'Failed to request verification');
+        }
     }
 
     async getVerificationMethods() {
         const oracle = await this.getMilestoneOracle();
-        return oracle.getSupportedVerificationMethods();
+        if (!oracle || !oracle.contract) {
+            throw new Error('Oracle contract not initialized');
+        }
+        // The contract doesn't have a getSupportedVerificationMethods function
+        // Return a default set of methods
+        return ['PROOF_OF_COMPLETION', 'CODE_REVIEW', 'TEST_RESULTS'];
     }
 
     async challengeVerification(
@@ -878,26 +913,26 @@ export class ContractInterface {
         evidence: string
     ) {
         const oracle = await this.getMilestoneOracle();
-        const tx = await oracle.challengeVerification(
-            projectId,
-            milestoneId,
-            reason,
-            evidence,
-            { value: ethers.utils.parseEther('0.1') } // Challenge requires stake
-        );
-        return tx.wait();
+        if (!oracle || !oracle.contract) {
+            throw new Error('Oracle contract not initialized');
+        }
+        // The contract doesn't have a challengeVerification function
+        throw new Error('Verification challenges are not supported in this version');
     }
 
     async getVerificationMetrics(projectId: string, milestoneId: string) {
         const oracle = await this.getMilestoneOracle();
-        const metrics = await oracle.getVerificationMetrics(projectId, milestoneId);
-        
+        if (!oracle || !oracle.contract) {
+            throw new Error('Oracle contract not initialized');
+        }
+        // The contract doesn't have a getVerificationMetrics function
+        // Return default metrics
         return {
-            totalVerifications: metrics.totalVerifications.toNumber(),
-            successRate: metrics.successRate.toNumber() / 100,
-            averageConfidence: metrics.averageConfidence.toNumber() / 100,
-            challengesResolved: metrics.challengesResolved.toNumber(),
-            averageVerificationTime: metrics.averageVerificationTime.toNumber()
+            totalVerifications: 0,
+            successRate: 0,
+            averageConfidence: 0,
+            challengesResolved: 0,
+            averageVerificationTime: 0
         };
     }
 
@@ -981,18 +1016,142 @@ export class ContractInterface {
 
     async getNeblSwap() {
         if (!this.signer) throw new Error("No signer available");
-        const address = this.getContractAddress('NEBLSwap');
-        return new ethers.Contract(
-            address,
-            NEBLSwapABI.abi,
-            this.signer
-        );
+        try {
+            // Use the same pattern as other contract getters
+            const contract = await this.getContract('NEBLSwap', NEBLSwapABI.abi);
+            return contract.contract;
+        } catch (error) {
+            console.error('Failed to initialize NEBLSwap contract:', error);
+            throw new Error('Failed to connect to swap contract');
+        }
     }
 
     async calculateExpectedNEBL(avaxAmount: string): Promise<ethers.BigNumber> {
+        try {
         const neblSwap = await this.getNeblSwap();
+            if (!neblSwap) {
+                throw new Error('Failed to connect to swap contract');
+            }
+            
+            // Check if the function exists on the contract
+            if (typeof neblSwap.calculateNEBLAmount !== 'function') {
+                console.error('calculateNEBLAmount function not found on contract');
+                throw new Error('Swap calculation function not available');
+            }
+            
         const avaxAmountWei = ethers.utils.parseEther(avaxAmount);
-        return await neblSwap.calculateNEBLAmount(avaxAmountWei);
+            const expectedAmount = await neblSwap.calculateNEBLAmount(avaxAmountWei);
+            return expectedAmount;
+        } catch (error: any) {
+            console.error('Failed to calculate expected NEBL:', error);
+            throw new Error('Failed to calculate expected NEBL amount');
+        }
+    }
+
+    async calculateExpectedAVAX(neblAmount: string): Promise<ethers.BigNumber> {
+        try {
+            const neblSwap = await this.getNeblSwap();
+            if (!neblSwap) {
+                throw new Error('Failed to connect to swap contract');
+            }
+            
+            // Check if the function exists on the contract
+            if (typeof neblSwap.calculateAVAXAmount !== 'function') {
+                console.error('calculateAVAXAmount function not found on contract');
+                throw new Error('Swap calculation function not available');
+            }
+            
+            const neblAmountWei = ethers.utils.parseEther(neblAmount);
+            const expectedAmount = await neblSwap.calculateAVAXAmount(neblAmountWei);
+            return expectedAmount;
+        } catch (error: any) {
+            console.error('Failed to calculate expected AVAX:', error);
+            throw new Error('Failed to calculate expected AVAX amount');
+        }
+    }
+
+    async swapNEBLForAVAX(neblAmount: string) {
+        try {
+            // Verify network first
+            const network = await this.provider.getNetwork();
+            if (network.chainId !== WEB3_CONFIG.NETWORKS.TESTNET.chainId) {
+                throw new Error(`Please switch to ${WEB3_CONFIG.NETWORKS.TESTNET.name}`);
+            }
+
+            const neblSwap = await this.getNeblSwap();
+            if (!neblSwap) {
+                throw new Error('Failed to connect to swap contract');
+            }
+
+            // Check if required functions exist
+            if (typeof neblSwap.calculateAVAXAmount !== 'function' || 
+                typeof neblSwap.swapNEBLForAVAX !== 'function') {
+                console.error('Required swap functions not found on contract');
+                throw new Error('Swap functionality not available');
+            }
+
+            const neblToken = await this.getNEBLToken();
+            const neblAmountWei = ethers.utils.parseEther(neblAmount);
+            
+            // Get expected AVAX amount first
+            const expectedAVAX = await neblSwap.calculateAVAXAmount(neblAmountWei);
+            if (!expectedAVAX || expectedAVAX.isZero()) {
+                throw new Error("Invalid swap amount");
+            }
+
+            if (!this.signer) {
+                throw new Error('No signer available');
+            }
+
+            // Check AVAX liquidity in the contract before attempting swap
+            const swapContractBalance = await this.provider.getBalance(neblSwap.address);
+            console.log('Swap contract AVAX balance:', ethers.utils.formatEther(swapContractBalance));
+            console.log('Expected AVAX amount:', ethers.utils.formatEther(expectedAVAX));
+            
+            // Add 1% buffer to account for any price changes
+            const requiredLiquidity = expectedAVAX.mul(101).div(100);
+            if (swapContractBalance.lt(requiredLiquidity)) {
+                throw new Error(`Insufficient AVAX liquidity in the swap contract. Available: ${ethers.utils.formatEther(swapContractBalance)} AVAX, Required: ${ethers.utils.formatEther(requiredLiquidity)} AVAX`);
+            }
+
+            // Check NEBL allowance
+            const address = await this.signer.getAddress();
+            const allowance = await neblToken.allowance(address, neblSwap.address);
+            if (allowance.lt(neblAmountWei)) {
+                // Approve if needed
+                console.log("Approving NEBLSwap to spend NEBL tokens");
+                const approveTx = await neblToken.approve(neblSwap.address, ethers.constants.MaxUint256);
+                await approveTx.wait();
+                console.log("Approval successful");
+            }
+
+            console.log("Executing NEBL to AVAX swap");
+            // Execute swap
+            const tx = await neblSwap.swapNEBLForAVAX(neblAmountWei);
+            console.log("Swap transaction submitted, waiting for confirmation");
+            const receipt = await tx.wait();
+            console.log("Swap confirmed in block:", receipt.blockNumber);
+
+            // Update token balance after swap (optimistic update)
+            setTimeout(() => this.getNeblBalance(address), 1000);
+
+            return receipt;
+        } catch (error: any) {
+            console.error('Swap failed:', error);
+            // Check for specific error messages in the error data
+            if (error.data?.message?.includes('Insufficient AVAX liquidity') || 
+                error.message?.includes('Insufficient AVAX liquidity')) {
+                throw new Error('Insufficient AVAX liquidity in the swap contract. Please try a smaller amount or try again later.');
+            }
+            if (error.code === 4001) {
+                throw new Error('Transaction rejected by user');
+            } else if (error.code === -32603) {
+                throw new Error('Network error. Please verify your connection and try again.');
+            } else if (error.message?.includes('price feed')) {
+                throw new Error('Price feed error. Please try again in a few minutes.');
+            }
+            throw new Error(error.message || 'Swap failed. Please try again.');
+        }
     }
 
     async swapAVAXForNEBL(avaxAmount: string) {
@@ -1004,6 +1163,17 @@ export class ContractInterface {
             }
 
             const neblSwap = await this.getNeblSwap();
+            if (!neblSwap) {
+                throw new Error('Failed to connect to swap contract');
+            }
+            
+            // Check if required functions exist
+            if (typeof neblSwap.calculateNEBLAmount !== 'function' || 
+                typeof neblSwap.swapAVAXForNEBL !== 'function') {
+                console.error('Required swap functions not found on contract');
+                throw new Error('Swap functionality not available');
+            }
+            
             const avaxAmountWei = ethers.utils.parseEther(avaxAmount);
             
             // Get expected NEBL amount first
@@ -1022,69 +1192,20 @@ export class ContractInterface {
                 throw new Error("Insufficient liquidity in swap contract");
             }
 
-            // Verify AVAX price feed is working
-            const latestPrice = await neblSwap.getLatestAVAXPrice();
-            if (!latestPrice || latestPrice.isZero()) {
-                throw new Error("Price feed error");
-            }
-
-            // Get current network conditions for optimal gas settings
-            const [gasPrice, baseFeePerGas] = await Promise.all([
-                this.provider.getGasPrice(),
-                this.provider.send('eth_maxPriorityFeePerGas', [])
-            ]);
-
-            const maxPriorityFeePerGas = ethers.BigNumber.from(baseFeePerGas);
-            const maxFeePerGas = gasPrice.mul(110).div(100); // Base fee + 10%
-
-            // Estimate gas with the exact parameters
-            const gasEstimate = await neblSwap.estimateGas.swapAVAXForNEBL({
+            console.log("Executing AVAX to NEBL swap");
+            // Execute swap
+            const tx = await neblSwap.swapAVAXForNEBL({
                 value: avaxAmountWei
             });
 
-            // Add larger buffer for swap operations
-            const gasLimit = gasEstimate.mul(130).div(100); // Add 30% buffer for swaps
-
-            // Execute swap with optimized settings
-            const tx = await neblSwap.swapAVAXForNEBL({
-                value: avaxAmountWei,
-                maxFeePerGas,
-                maxPriorityFeePerGas,
-                gasLimit
-            });
-
-            // Wait for confirmation with timeout and retry logic
-            let receipt = null;
-            let retries = 3;
-            
-            while (retries > 0 && !receipt) {
-                try {
-                    receipt = await Promise.race([
-                        tx.wait(1),
-                        new Promise((_, reject) => 
-                            setTimeout(() => reject(new Error('Transaction confirmation timeout')), 
-                            WEB3_CONFIG.ETHERS_CONFIG.timeout)
-                        )
-                    ]);
-                    break;
-                } catch (err) {
-                    console.warn('Waiting for transaction confirmation...', err);
-                    retries--;
-                    if (retries === 0) throw err;
-                    await new Promise(resolve => setTimeout(resolve, 5000));
-                }
-            }
-
-            // Verify the swap was successful
-            const swapEvent = receipt.events?.find(
-                (e: ethers.Event) => e.event === 'SwapAVAXForNEBL'
-            );
-            
-            if (!swapEvent) {
-                throw new Error('Swap transaction completed but no event found. Please check your balance.');
-            }
+            console.log("Swap transaction submitted, waiting for confirmation");
+            const receipt = await tx.wait();
+            console.log("Swap confirmed in block:", receipt.blockNumber);
 
             // Get the current address before setting up the timeout
+            if (!this.signer) {
+                throw new Error('No signer available');
+            }
             const address = await this.signer.getAddress();
 
             // Update token balance after swap (optimistic update)
@@ -1097,7 +1218,7 @@ export class ContractInterface {
                 throw new Error('Transaction rejected by user');
             } else if (error.code === -32603) {
                 throw new Error('Network error. Please verify your connection and try again.');
-            } else if (error.message.includes('price feed')) {
+            } else if (error.message?.includes('price feed')) {
                 throw new Error('Price feed error. Please try again in a few minutes.');
             }
             throw new Error(error.message || 'Swap failed. Please try again.');
@@ -1138,12 +1259,31 @@ export class ContractInterface {
     async purchaseListing(listingId: number, price: string) {
         try {
             const marketplace = await this.getIPMarketplace();
-            const listing = await marketplace.getListing(listingId);
-            
+            if (!marketplace) {
+                throw new Error('Failed to connect to marketplace contract');
+            }
+
+            // First verify listing status with retries
+            let listing;
+            try {
+                listing = await this.retryOperation(async () => {
+                    const result = await marketplace.getListing(listingId);
+                    if (!result) {
+                        throw new Error('Listing not found');
+                    }
+                    return result;
+                }, 3); // Maximum 3 retries for listing verification
+            } catch (error: any) {
+                console.error('Failed to verify listing:', error);
+                throw new Error('Unable to verify listing status. Please try again.');
+            }
+
+            // Check if listing is active after successful retrieval
             if (!listing.isActive) {
-                throw new Error('Listing is not active');
+                throw new Error('This listing has already been purchased or cancelled. Please refresh the page.');
             }
             
+            // Execute the purchase
             const tx = await marketplace.purchaseListing(listingId, {
                 value: ethers.utils.parseEther(price)
             });
@@ -1152,7 +1292,18 @@ export class ContractInterface {
             return receipt;
         } catch (error: any) {
             console.error('Purchase failed:', error);
-            throw new Error(error.message || 'Failed to purchase listing');
+            // Preserve specific error messages
+            if (error.message?.includes('already been purchased') || 
+                error.message?.includes('Unable to verify listing status') ||
+                error.message?.includes('Listing not found')) {
+                throw error;
+            }
+            // For network or unexpected errors
+            if (this.isNetworkError(error)) {
+                throw new Error('Network error. Please check your connection and try again.');
+            }
+            // For other errors
+            throw new Error('Failed to purchase listing. Please try again.');
         }
     }
 
@@ -1242,5 +1393,11 @@ export class ContractInterface {
         }
         
         throw lastError;
+    }
+
+    async getListing(listingId: number) {
+        const signer = this.getSigner();
+        const marketplace = await this.getIPMarketplace();
+        return await marketplace.connect(signer).getListing(listingId);
     }
 }

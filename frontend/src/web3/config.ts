@@ -51,7 +51,7 @@ export const WEB3_CONFIG = {
             address: '0x6bE799db96487ba39262e15e6D8b1b67aC8b4DA0',
         },
         NEBLSwap: {
-            address: '0x512ade688582F8181047B202EdFacd9043632A03',
+            address: '0xf7CD5eea2c270D0f13092CEf22f6DBec82Cd11bb',
         },
         ResearchProject: {
             address: '0xE5fa781CA7A6d94dcB571f191c92E5BC8f9f4B41',

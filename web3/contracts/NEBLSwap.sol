@@ -14,6 +14,7 @@ contract NEBLSwap is ReentrancyGuard, Ownable {
     uint256 public constant FEE_DENOMINATOR = 10000;
 
     event SwapAVAXForNEBL(address indexed user, uint256 avaxAmount, uint256 neblAmount);
+    event SwapNEBLForAVAX(address indexed user, uint256 neblAmount, uint256 avaxAmount);
     event SwapFeeUpdated(uint256 newFee);
 
     constructor(address _neblToken, address _priceFeed) {
@@ -44,6 +45,20 @@ contract NEBLSwap is ReentrancyGuard, Ownable {
         return finalAmount;
     }
 
+    function calculateAVAXAmount(uint256 neblAmount) public view returns (uint256) {
+        require(neblAmount > 0, "Amount must be greater than 0");
+        
+        uint256 avaxPrice = getLatestAVAXPrice();
+        uint256 avaxAmount = (neblAmount * (10 ** PRICE_DECIMALS)) / avaxPrice;
+        
+        // Calculate fee with proper precision handling
+        uint256 fee = (avaxAmount * swapFee) / FEE_DENOMINATOR;
+        uint256 finalAmount = avaxAmount - fee;
+        
+        require(finalAmount > 0, "Calculated amount too small");
+        return finalAmount;
+    }
+
     function swapAVAXForNEBL() public payable nonReentrant {
         require(msg.value > 0, "Must send AVAX");
         
@@ -57,6 +72,25 @@ contract NEBLSwap is ReentrancyGuard, Ownable {
         
         // Emit event after successful transfer
         emit SwapAVAXForNEBL(msg.sender, msg.value, neblAmount);
+    }
+
+    function swapNEBLForAVAX(uint256 neblAmount) public nonReentrant {
+        require(neblAmount > 0, "Must send NEBL");
+        
+        uint256 avaxAmount = calculateAVAXAmount(neblAmount);
+        require(avaxAmount > 0, "Invalid AVAX amount calculated");
+        require(address(this).balance >= avaxAmount, "Insufficient AVAX liquidity");
+        
+        // Transfer tokens first
+        bool success = neblToken.transferFrom(msg.sender, address(this), neblAmount);
+        require(success, "Token transfer failed");
+        
+        // Transfer AVAX
+        (bool sent, ) = msg.sender.call{value: avaxAmount}("");
+        require(sent, "Failed to send AVAX");
+        
+        // Emit event after successful transfer
+        emit SwapNEBLForAVAX(msg.sender, neblAmount, avaxAmount);
     }
 
     function setSwapFee(uint256 _newFee) external onlyOwner {

@@ -246,6 +246,38 @@
     {
       "stateMutability": "payable",
       "type": "receive"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint256",
+          "name": "neblAmount",
+          "type": "uint256"
+        }
+      ],
+      "name": "calculateAVAXAmount",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "uint256",
+          "name": "neblAmount",
+          "type": "uint256"
+        }
+      ],
+      "name": "swapNEBLForAVAX",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
     }
   ]
 }
