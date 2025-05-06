@@ -706,11 +706,106 @@ export class ContractInterface {
     }
 
     async fundProjectMilestone(projectId: string, milestoneId: string, amount: string) {
-        const researchProject = await this.getResearchProject();
-        const tx = await researchProject.fundProject(projectId, milestoneId, {
-            value: ethers.utils.parseEther(amount)
-        });
-        return tx.wait();
+        try {
+            const researchProject = await this.getResearchProject();
+            console.log('Project ID:', projectId);
+            console.log('Milestone ID:', milestoneId);
+            console.log('Amount (before parsing):', amount);
+            
+            const amountWei = ethers.utils.parseEther(amount);
+            console.log('Amount in Wei:', amountWei.toString());
+            
+            // Check project deadline before attempting transaction
+            try {
+                const project = await researchProject.getProject(projectId);
+                const deadlineTimestamp = project.deadline.toNumber() * 1000; // Convert to milliseconds
+                const currentTimestamp = Date.now();
+                
+                if (currentTimestamp > deadlineTimestamp) {
+                    throw new Error(`Funding deadline passed. Project deadline was ${new Date(deadlineTimestamp).toLocaleString()}`);
+                }
+            } catch (err: any) {
+                if (err.message?.includes('Funding deadline')) {
+                    throw err; // Re-throw our custom error
+                }
+                // If it's another error with project fetching, continue with the transaction
+                console.warn('Could not verify project deadline:', err);
+            }
+            
+            const tx = await researchProject.fundProject(projectId, milestoneId, {
+                value: amountWei
+            });
+            
+            return await tx.wait();
+        } catch (error: any) {
+            console.error('fundProjectMilestone error:', error);
+            
+            // Check for specific error messages from contract
+            if (error.data?.message?.includes('Funding deadline passed') || 
+                error.message?.includes('Funding deadline passed')) {
+                throw new Error('Funding deadline for this project has passed. You cannot fund it anymore.');
+            }
+            
+            // Check for other common errors
+            if (error.code === 'INSUFFICIENT_FUNDS') {
+                throw new Error('Insufficient balance to complete this transaction.');
+            } else if (error.code === 'ACTION_REJECTED' || error.code === 4001) {
+                throw new Error('Transaction was rejected. Please try again.');
+            }
+            
+            throw error;
+        }
+    }
+
+    async fundProject(projectId: string, amount: string) {
+        try {
+            const researchProject = await this.getResearchProject();
+            console.log('Project ID:', projectId);
+            console.log('Amount (before parsing):', amount);
+            
+            const amountWei = ethers.utils.parseEther(amount);
+            console.log('Amount in Wei:', amountWei.toString());
+            
+            // Check project deadline before attempting transaction
+            try {
+                const project = await researchProject.getProject(projectId);
+                const deadlineTimestamp = project.deadline.toNumber() * 1000; // Convert to milliseconds
+                const currentTimestamp = Date.now();
+                
+                if (currentTimestamp > deadlineTimestamp) {
+                    throw new Error(`Funding deadline passed. Project deadline was ${new Date(deadlineTimestamp).toLocaleString()}`);
+                }
+            } catch (err: any) {
+                if (err.message?.includes('Funding deadline')) {
+                    throw err; // Re-throw our custom error
+                }
+                // If it's another error with project fetching, continue with the transaction
+                console.warn('Could not verify project deadline:', err);
+            }
+            
+            const tx = await researchProject.fundProject(projectId, {
+                value: amountWei
+            });
+            
+            return await tx.wait();
+        } catch (error: any) {
+            console.error('fundProject error:', error);
+            
+            // Check for specific error messages from contract
+            if (error.data?.message?.includes('Funding deadline passed') || 
+                error.message?.includes('Funding deadline passed')) {
+                throw new Error('Funding deadline for this project has passed. You cannot fund it anymore.');
+            }
+            
+            // Check for other common errors
+            if (error.code === 'INSUFFICIENT_FUNDS') {
+                throw new Error('Insufficient balance to complete this transaction.');
+            } else if (error.code === 'ACTION_REJECTED' || error.code === 4001) {
+                throw new Error('Transaction was rejected. Please try again.');
+            }
+            
+            throw error;
+        }
     }
 
     async submitMilestoneVerification(projectId: string, milestoneId: string, proofCID: string) {
@@ -752,14 +847,6 @@ export class ContractInterface {
             funds: ethers.utils.formatEther(funds),
             released
         };
-    }
-
-    async fundProject(projectId: string, amount: string) {
-        const researchProject = await this.getResearchProject();
-        const tx = await researchProject.fundProject(projectId, {
-            value: ethers.utils.parseEther(amount)
-        });
-        return tx.wait();
     }
 
     async getProjectDetails(projectId: string): Promise<ProjectDetails> {
@@ -1258,52 +1345,112 @@ export class ContractInterface {
 
     async purchaseListing(listingId: number, price: string) {
         try {
-            const marketplace = await this.getIPMarketplace();
-            if (!marketplace) {
-                throw new Error('Failed to connect to marketplace contract');
+            if (!this.signer) {
+                throw new Error('No signer available');
             }
 
-            // First verify listing status with retries
-            let listing;
-            try {
-                listing = await this.retryOperation(async () => {
-                    const result = await marketplace.getListing(listingId);
-                    if (!result) {
-                        throw new Error('Listing not found');
-                    }
-                    return result;
-                }, 3); // Maximum 3 retries for listing verification
-            } catch (error: any) {
-                console.error('Failed to verify listing:', error);
-                throw new Error('Unable to verify listing status. Please try again.');
-            }
-
-            // Check if listing is active after successful retrieval
-            if (!listing.isActive) {
-                throw new Error('This listing has already been purchased or cancelled. Please refresh the page.');
+            const ipMarketplace = await this.getIPMarketplace();
+            const priceWei = ethers.utils.parseEther(price);
+            
+            console.log(`Attempting to purchase listing ${listingId} for ${price} AVAX (${priceWei.toString()} wei)`);
+            
+            // First verify the listing exists and get its actual price
+            const listing = await ipMarketplace.getListing(listingId);
+            if (!listing || !listing.listingId) {
+                throw new Error(`Listing ${listingId} not found`);
             }
             
-            // Execute the purchase
-            const tx = await marketplace.purchaseListing(listingId, {
-                value: ethers.utils.parseEther(price)
+            console.log('Listing found:', {
+                listingId: listing.listingId.toString(),
+                tokenId: listing.tokenId.toString(),
+                price: ethers.utils.formatEther(listing.price),
+                priceWei: listing.price.toString(),
+                isActive: listing.isActive,
+                seller: listing.seller
             });
             
-            const receipt = await tx.wait();
-            return receipt;
+            if (!listing.isActive) {
+                throw new Error('Listing is no longer active');
+            }
+            
+            // Use the precise listing price from the contract
+            const listingPrice = listing.price;
+            
+            // Check if prices match
+            if (!listingPrice.eq(priceWei)) {
+                console.error('Price mismatch:', {
+                    providedPrice: priceWei.toString(),
+                    listingPrice: listingPrice.toString(),
+                    difference: priceWei.sub(listingPrice).toString()
+                });
+                throw new Error(`Price mismatch. Required: ${ethers.utils.formatEther(listingPrice)} AVAX, Provided: ${price} AVAX`);
+            }
+            
+            // Use a manual gas limit to bypass estimation errors
+            const manualGasLimit = ethers.BigNumber.from('500000'); // Conservative gas limit
+            
+            // Check if user has enough balance
+            const signerAddress = await this.signer.getAddress();
+            const balance = await this.provider.getBalance(signerAddress);
+            const gasPrice = await this.provider.getGasPrice();
+            const requiredBalance = listingPrice.add(manualGasLimit.mul(gasPrice));
+            
+            console.log('Balance check:', {
+                balance: ethers.utils.formatEther(balance),
+                requiredBalance: ethers.utils.formatEther(requiredBalance),
+                listingPrice: ethers.utils.formatEther(listingPrice),
+                estimatedGas: ethers.utils.formatEther(manualGasLimit.mul(gasPrice))
+            });
+            
+            if (balance.lt(requiredBalance)) {
+                throw new Error(`Insufficient balance. Required: ${ethers.utils.formatEther(requiredBalance)} AVAX, Available: ${ethers.utils.formatEther(balance)} AVAX`);
+            }
+
+            // Execute purchase with manual gas limit
+            console.log('Sending transaction with params:', {
+                listingId,
+                value: ethers.utils.formatEther(listingPrice),
+                gasLimit: manualGasLimit.toString(),
+                gasPrice: gasPrice.toString()
+            });
+            
+            const tx = await ipMarketplace.purchase(listingId, {
+                value: listingPrice,
+                gasLimit: manualGasLimit,
+                gasPrice: gasPrice
+            });
+            
+            console.log('Transaction sent:', tx.hash);
+            return await tx.wait();
         } catch (error: any) {
             console.error('Purchase failed:', error);
-            // Preserve specific error messages
-            if (error.message?.includes('already been purchased') || 
-                error.message?.includes('Unable to verify listing status') ||
-                error.message?.includes('Listing not found')) {
-                throw error;
+            
+            // Extract the detailed error message from RPC error if available
+            let errorMessage = error.message || 'Unknown error';
+            if (error.error && error.error.message) {
+                errorMessage = error.error.message;
+            } else if (error.data && error.data.message) {
+                errorMessage = error.data.message;
             }
-            // For network or unexpected errors
-            if (this.isNetworkError(error)) {
-                throw new Error('Network error. Please check your connection and try again.');
+            
+            if (error.code === 4001) {
+                throw new Error('Transaction rejected by user');
+            } else if (errorMessage.includes('Insufficient payment')) {
+                // Check if we can extract the required payment from the contract call
+                try {
+                    const ipMarketplace = await this.getIPMarketplace();
+                    const listing = await ipMarketplace.getListing(listingId);
+                    if (listing && listing.price) {
+                        throw new Error(`Insufficient payment. Required: ${ethers.utils.formatEther(listing.price)} AVAX, Provided: ${price} AVAX`);
+                    }
+                } catch (subError) {
+                    // Fall back to generic message if we can't get the listing
+                }
+                
+                throw new Error('Insufficient payment amount. The contract requires a different amount than provided.');
             }
-            // For other errors
-            throw new Error('Failed to purchase listing. Please try again.');
+            
+            throw new Error(`Failed to purchase listing: ${errorMessage}`);
         }
     }
 

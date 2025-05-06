@@ -1,14 +1,14 @@
-import React from "react";
-import "./WalletPrompt.css";
+import type React from "react"
+import "./WalletPrompt.css"
 
 interface WalletPromptProps {
-  message: string;
-  onConnect: () => void;
-  isLoading?: boolean;
-  isWrongNetwork?: boolean;
-  chainId?: string | null;
-  onSwitchNetwork?: () => void;
-  isNetworkSwitching?: boolean;
+  message: string
+  onConnect: () => void
+  isLoading?: boolean
+  isWrongNetwork?: boolean
+  chainId?: string | null
+  onSwitchNetwork?: () => void
+  isNetworkSwitching?: boolean
 }
 
 const WalletPrompt: React.FC<WalletPromptProps> = ({
@@ -26,7 +26,7 @@ const WalletPrompt: React.FC<WalletPromptProps> = ({
         <>
           <div className="network-card">
             <div className="network-header">
-              <div className="network-indicator" style={{ background: 'var(--error)' }}></div>
+              <div className="network-indicator" style={{ background: "var(--error)" }}></div>
               <div className="network-title">Wrong Network</div>
             </div>
             <div className="network-content">
@@ -34,7 +34,7 @@ const WalletPrompt: React.FC<WalletPromptProps> = ({
               <div className="network-details">
                 <div className="network-detail">
                   <span className="detail-label">Current</span>
-                  <span className="detail-value">{chainId || 'Unknown'}</span>
+                  <span className="detail-value">{chainId || "Unknown"}</span>
                 </div>
                 <div className="network-detail">
                   <span className="detail-label">Required</span>
@@ -52,16 +52,14 @@ const WalletPrompt: React.FC<WalletPromptProps> = ({
             </div>
           </div>
         </>
-      );
+      )
     }
 
     return (
       <>
         <div className="welcome-message">
           <h3 className="welcome-title">Connect Your Wallet</h3>
-          <p className="welcome-subtitle">
-            {message}
-          </p>
+          <p className="welcome-subtitle">{message}</p>
         </div>
 
         <div className="wallet-icon-wrapper">
@@ -69,20 +67,14 @@ const WalletPrompt: React.FC<WalletPromptProps> = ({
         </div>
 
         <div className="connect-button-container">
-          <button
-            className={`connect-button ${isLoading ? "loading" : ""}`}
-            onClick={onConnect}
-            disabled={isLoading}
-          >
-            <span className="button-text">
-              {isLoading ? "Connecting..." : "Connect MetaMask"}
-            </span>
+          <button className={`connect-button ${isLoading ? "loading" : ""}`} onClick={onConnect} disabled={isLoading}>
+            <span className="button-text">{isLoading ? "Connecting..." : "Connect MetaMask"}</span>
             <div className="button-glow"></div>
           </button>
         </div>
       </>
-    );
-  };
+    )
+  }
 
   return (
     <div className="wallet-prompt">
@@ -102,7 +94,7 @@ const WalletPrompt: React.FC<WalletPromptProps> = ({
         {renderContent()}
       </div>
     </div>
-  );
-};
+  )
+}
 
-export default WalletPrompt;
+export default WalletPrompt

@@ -125,9 +125,41 @@ const ProjectDetails: React.FC = () => {
                 throw new Error('Amount exceeds milestone target');
             }
 
-            const tx = await contractInterface.fundProject(
+            // Check if user has enough balance including gas
+            const provider = contractInterface.provider;
+            const balance = await provider.getBalance(account);
+            
+            // Get the research project contract to estimate gas
+            const researchProject = await contractInterface.getResearchProject();
+            
+            // Estimate gas for the transaction
+            const gasEstimate = await researchProject.estimateGas.fundProject(
                 id,
-                selectedMilestone.toString()
+                (selectedMilestone + 1).toString(),
+                { value: amountInWei, from: account }
+            );
+            
+            // Add 20% buffer to gas estimate
+            const gasBuffer = gasEstimate.mul(120).div(100);
+            const estimatedGasCost = gasBuffer.mul(await provider.getGasPrice());
+            
+            // Total required = amount + gas cost
+            const totalRequired = amountInWei.add(estimatedGasCost);
+            
+            console.log('User Balance:', ethers.utils.formatEther(balance));
+            console.log('Funding Amount:', ethers.utils.formatEther(amountInWei));
+            console.log('Estimated Gas Cost:', ethers.utils.formatEther(estimatedGasCost));
+            console.log('Total Required:', ethers.utils.formatEther(totalRequired));
+            
+            if (balance.lt(totalRequired)) {
+                throw new Error(`Insufficient balance (${ethers.utils.formatEther(balance)} AVAX) to fund project and cover gas costs (${ethers.utils.formatEther(totalRequired)} AVAX required)`);
+            }
+
+            // Use fundAmount directly as a string - it will be converted to Wei in the contract interface
+            const tx = await contractInterface.fundProjectMilestone(
+                id,
+                (selectedMilestone + 1).toString(), // Milestones are 1-indexed in contract
+                fundAmount // Pass the amount as a string in AVAX
             );
             await tx.wait();
             
@@ -158,6 +190,11 @@ const ProjectDetails: React.FC = () => {
     const currentFunding = ethers.utils.formatEther(project.currentFunding);
     const progressPercentage = (parseFloat(currentFunding) / parseFloat(totalFunding)) * 100;
     const isResearcher = account && project && account.toLowerCase() === project.researcher.toLowerCase();
+    
+    // Check if project deadline has passed
+    const deadlineTimestamp = project.deadline.toNumber() * 1000; // Convert to milliseconds
+    const currentTimestamp = Date.now();
+    const isDeadlinePassed = currentTimestamp > deadlineTimestamp;
 
     return (
         <div className="project-details">
@@ -215,7 +252,7 @@ const ProjectDetails: React.FC = () => {
                     <span>Goal: {totalFunding} AVAX</span>
                 </div>
 
-                {project.isActive && !isResearcher && (
+                {project.isActive && !isResearcher && !isDeadlinePassed && (
                     <form onSubmit={handleFund} className="funding-form">
                         <h3>Support this Research</h3>
                         <div className="form-group">
@@ -253,6 +290,13 @@ const ProjectDetails: React.FC = () => {
                         </div>
                         {error && <div className="error-message">{error}</div>}
                     </form>
+                )}
+                
+                {isDeadlinePassed && (
+                    <div className="deadline-passed-notice">
+                        <p>Funding deadline has passed. This project is no longer accepting contributions.</p>
+                        <p>Deadline: {new Date(deadlineTimestamp).toLocaleDateString()}</p>
+                    </div>
                 )}
             </div>
 

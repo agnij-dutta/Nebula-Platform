@@ -105,43 +105,107 @@ const ListingsContainer: React.FC = () => {
         setError('');
         
         try {
+            console.log(`Starting purchase for token ID ${tokenId} with price ${price} AVAX`);
             const provider = contractInterface.provider;
+            const signer = contractInterface.getSigner();
             
-            // Check if listing is still active by getting the listing details
-            try {
-                const marketplace = await contractInterface.getIPMarketplace();
-                const listing = await marketplace.getListing(parseInt(tokenId));
-                
-                if (!listing.isActive) {
-                    // Refresh the listings to show updated status
-                    await loadListings();
-                    throw new Error('This listing is no longer available. The page has been refreshed.');
-                }
-            } catch (err: any) {
-                console.error('Failed to check listing status:', err);
-                // Refresh the listings to ensure we have the latest state
+            // Get the marketplace contract address
+            const marketplaceAddress = contractInterface.getIPMarketplaceAddress();
+            console.log(`IPMarketplace address: ${marketplaceAddress}`);
+            
+            // Get the marketplace contract
+            const marketplace = await contractInterface.getIPMarketplace();
+            
+            // Check if listing is still active
+            console.log(`Checking listing status for ID ${tokenId}`);
+            const listing = await marketplace.getListing(parseInt(tokenId));
+            console.log('Listing data:', {
+                listingId: listing.listingId.toString(),
+                tokenId: listing.tokenId.toString(),
+                price: ethers.utils.formatEther(listing.price),
+                isActive: listing.isActive,
+                seller: listing.seller
+            });
+            
+            if (!listing.isActive) {
                 await loadListings();
-                throw new Error('Unable to verify listing status. The page has been refreshed.');
+                throw new Error('This listing is no longer available. The page has been refreshed.');
             }
             
             // Check user's balance
             const balance = await provider.getBalance(account);
-            const priceWei = ethers.utils.parseEther(price);
+            const listingPrice = listing.price;
             
-            if (balance.lt(priceWei)) {
-                throw new Error('Insufficient AVAX balance to purchase this IP');
+            // Use manual gas limit to bypass estimation issues
+            const manualGasLimit = ethers.BigNumber.from('500000'); // Conservative gas limit
+            const gasPrice = await provider.getGasPrice();
+            const estimatedGasCost = manualGasLimit.mul(gasPrice);
+            
+            // Add gas cost to the price to get total required
+            const totalRequired = listingPrice.add(estimatedGasCost);
+            
+            console.log('Purchase validation:', {
+                balance: ethers.utils.formatEther(balance),
+                listingPrice: ethers.utils.formatEther(listingPrice),
+                estimatedGasCost: ethers.utils.formatEther(estimatedGasCost),
+                totalRequired: ethers.utils.formatEther(totalRequired),
+                sufficientBalance: balance.gte(totalRequired)
+            });
+            
+            if (balance.lt(totalRequired)) {
+                throw new Error(`Insufficient AVAX balance (${ethers.utils.formatEther(balance)} AVAX) to purchase this IP and cover gas costs (${ethers.utils.formatEther(totalRequired)} AVAX required)`);
             }
             
-            // Execute the purchase
-            await contractInterface.purchaseListing(parseInt(tokenId), price);
-            
-            // Show success message
-            setError('');
-            
-            // Refresh the listings
-            setCurrentPage(0);
-            await loadListings();
-            
+            // Execute the purchase directly using the raw contract
+            try {
+                console.log(`Sending transaction with manual gas limit: ${manualGasLimit.toString()}`);
+                
+                // Create a direct contract instance
+                const marketplaceContract = new ethers.Contract(
+                    marketplaceAddress,
+                    [
+                        "function purchaseListing(uint256 listingId) external payable",
+                        "function getListing(uint256 listingId) external view returns (uint256 listingId, uint256 tokenId, address seller, uint256 price, bool isActive, bool isLicense, uint256 licenseDuration)"
+                    ],
+                    signer
+                );
+                
+                // Send transaction with exact listing price
+                const tx = await marketplaceContract.purchaseListing(parseInt(tokenId), {
+                    value: listingPrice,
+                    gasLimit: manualGasLimit,
+                    gasPrice: gasPrice
+                });
+                
+                console.log('Purchase transaction sent:', tx.hash);
+                const receipt = await tx.wait();
+                console.log('Purchase successful:', receipt);
+                
+                // Refresh the listings
+                setCurrentPage(0);
+                await loadListings();
+            } catch (err: any) {
+                console.error('Purchase transaction failed:', err);
+                let errorMessage = 'Failed to purchase IP token';
+                
+                if (err?.code === 'INSUFFICIENT_FUNDS') {
+                    errorMessage = 'Insufficient AVAX balance to purchase this IP';
+                } else if (err?.code === 'ACTION_REJECTED' || err?.code === 4001) {
+                    errorMessage = 'Transaction was rejected. Please try again.';
+                } else if (err?.code === -32603) {
+                    if (err?.data?.message?.includes('execution reverted')) {
+                        errorMessage = 'Transaction failed: ' + err.data.message;
+                    } else {
+                        errorMessage = 'Transaction failed. Please check your network connection and try again.';
+                    }
+                } else if (err?.message?.includes('network')) {
+                    errorMessage = 'Network error. Please check your connection and try again.';
+                } else if (err?.message) {
+                    errorMessage = err.message;
+                }
+                
+                setError(errorMessage);
+            }
         } catch (err: any) {
             console.error('Purchase failed:', err);
             let errorMessage = 'Failed to purchase IP token';

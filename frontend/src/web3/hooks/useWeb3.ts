@@ -26,12 +26,17 @@ async function retryOperation<T>(
             lastError = err;
             if (attempt === maxRetries) break;
             
-            // Only retry on RPC errors or network issues
-            if (err.code !== -32603 && !err.message?.includes('network')) {
-                throw err;
+            // Retry on RPC errors, network issues, or gas estimation failures
+            if (err.code === -32603 || 
+                err.message?.includes('network') || 
+                err.message?.includes('gas') ||
+                err.message?.includes('timeout')) {
+                console.warn(`RPC attempt ${attempt + 1} failed, retrying...`, err);
+            await new Promise(resolve => setTimeout(resolve, getDelay(attempt)));
+                continue;
             }
             
-            await new Promise(resolve => setTimeout(resolve, getDelay(attempt)));
+            throw err;
         }
     }
     

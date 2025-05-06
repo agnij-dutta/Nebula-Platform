@@ -20,9 +20,10 @@ export const WEB3_CONFIG = {
             chainId: 43113,
             name: 'Avalanche Fuji Testnet',
             rpcUrl: [
-                'https://api.avax-test.network/ext/bc/C/rpc',
                 'https://avalanche-fuji-c-chain.publicnode.com',
-                'https://endpoints.omniatech.io/v1/avax/fuji/public'
+                'https://endpoints.omniatech.io/v1/avax/fuji/public',
+                'https://api.avax-test.network/ext/bc/C/rpc',
+                'https://rpc.ankr.com/avalanche_fuji'
             ],
             blockExplorerUrl: 'https://testnet.snowtrace.io',
             nativeCurrency: {
@@ -34,8 +35,8 @@ export const WEB3_CONFIG = {
         }
     },
     CONNECTION_CONFIG: {
-        timeoutMs: 30000, // Reduced timeout for faster fallback
-        retryCount: 3,
+        timeoutMs: 15000, // Reduced timeout for faster fallback
+        retryCount: 5, // Increased retry count
         retryDelayMs: 1000,
         autoConnect: true,
         allowedDomains: ['localhost', 'nebula-platform-one.vercel.app']
