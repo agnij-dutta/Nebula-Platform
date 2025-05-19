@@ -128,20 +128,20 @@ export class BaseContract {
         maxRetries: number = WEB3_CONFIG.ETHERS_CONFIG.rpcConfig.maxRetries
     ): Promise<T> {
         let lastError: Error | null = null;
-        
+
         for (let attempt = 0; attempt <= maxRetries; attempt++) {
             try {
                 return await this.executeWithFallback(operation);
             } catch (err: any) {
                 lastError = err;
                 if (attempt === maxRetries) break;
-                
+
                 if (err.code !== -32603 && !err.message?.includes('network')) {
                     throw err;
                 }
-                
-                await new Promise(resolve => 
-                    setTimeout(resolve, 
+
+                await new Promise(resolve =>
+                    setTimeout(resolve,
                         WEB3_CONFIG.ETHERS_CONFIG.rpcConfig.customBackoff(
                             WEB3_CONFIG.ETHERS_CONFIG.rpcConfig.maxRetries - attempt
                         )
@@ -149,7 +149,7 @@ export class BaseContract {
                 );
             }
         }
-        
+
         throw lastError;
     }
 
@@ -160,18 +160,18 @@ export class BaseContract {
     ): Promise<NonNullable<Awaited<R>>[]> {
         const results: NonNullable<Awaited<R>>[] = [];
         let activeBatches = 0;
-        
+
         while (activeBatches >= WEB3_CONFIG.ETHERS_CONFIG.rpcConfig.maxConcurrentBatches) {
             await new Promise(resolve => setTimeout(resolve, 100));
         }
-        
+
         activeBatches++;
-        
+
         try {
             for (let i = 0; i < items.length; i += batchSize) {
                 // Add exponential backoff between batches
                 if (i > 0) {
-                    await new Promise(resolve => 
+                    await new Promise(resolve =>
                         setTimeout(resolve, Math.min(1000 * Math.pow(2, i / batchSize), 10000))
                     );
                 }
@@ -187,16 +187,16 @@ export class BaseContract {
                 });
 
                 const batchResults = await Promise.all(batchPromises);
-                
+
                 const validResults = batchResults
-                    .filter((result): result is { status: 'fulfilled', value: NonNullable<Awaited<R>> } => 
+                    .filter((result): result is { status: 'fulfilled', value: NonNullable<Awaited<R>> } =>
                         result.status === 'fulfilled' && result.value != null
                     )
                     .map(result => result.value);
-                
+
                 results.push(...validResults);
             }
-            
+
             return results;
         } finally {
             activeBatches--;
@@ -219,12 +219,12 @@ export class BaseContract {
         gasLimitMultiplier: number = WEB3_CONFIG.GAS_LIMIT_MULTIPLIER
     ): Promise<T> {
         const tx = await operation();
-        
+
         const waitForReceipt = async (retriesLeft: number): Promise<T> => {
             try {
                 const receipt = await Promise.race([
                     tx.wait(1) as Promise<T>,
-                    new Promise<T>((_, reject) => 
+                    new Promise<T>((_, reject) =>
                         setTimeout(
                             () => reject(new Error('Transaction confirmation timeout')),
                             WEB3_CONFIG.ETHERS_CONFIG.timeout
@@ -235,10 +235,10 @@ export class BaseContract {
             } catch (err) {
                 console.warn('Waiting for transaction confirmation...', err);
                 if (retriesLeft === 0) throw err;
-                
-                await new Promise(resolve => 
+
+                await new Promise(resolve =>
                     setTimeout(
-                        resolve, 
+                        resolve,
                         WEB3_CONFIG.ETHERS_CONFIG.rpcConfig.customBackoff(
                             WEB3_CONFIG.ETHERS_CONFIG.rpcConfig.maxRetries - retriesLeft
                         )
@@ -247,14 +247,14 @@ export class BaseContract {
                 return waitForReceipt(retriesLeft - 1);
             }
         };
-        
+
         return waitForReceipt(WEB3_CONFIG.ETHERS_CONFIG.rpcConfig.maxRetries);
     }
 }
 
 // Add retry operation helper
 const retryOperation = async <T,>(
-    operation: () => Promise<T>, 
+    operation: () => Promise<T>,
     maxRetries: number = 3
 ): Promise<T> => {
     let lastError;
@@ -289,7 +289,7 @@ export class ContractInterface {
     private signer: ethers.Signer | undefined;
     private contracts: Map<string, BaseContract> = new Map();
     private fallbackProviders: ethers.providers.JsonRpcProvider[] = [];
-    
+
     constructor(provider: ethers.providers.Web3Provider) {
         this.provider = provider;
         this.initializeSigner();
@@ -317,11 +317,11 @@ export class ContractInterface {
 
     private initializeFallbackProviders() {
         // Initialize backup RPC providers
-        const rpcUrls = Array.isArray(WEB3_CONFIG.NETWORKS.TESTNET.rpcUrl) 
-            ? WEB3_CONFIG.NETWORKS.TESTNET.rpcUrl 
+        const rpcUrls = Array.isArray(WEB3_CONFIG.NETWORKS.TESTNET.rpcUrl)
+            ? WEB3_CONFIG.NETWORKS.TESTNET.rpcUrl
             : [WEB3_CONFIG.NETWORKS.TESTNET.rpcUrl];
 
-        this.fallbackProviders = rpcUrls.map(url => 
+        this.fallbackProviders = rpcUrls.map(url =>
             new ethers.providers.JsonRpcProvider(url, {
                 name: WEB3_CONFIG.NETWORKS.TESTNET.name,
                 chainId: WEB3_CONFIG.NETWORKS.TESTNET.chainId,
@@ -370,7 +370,7 @@ export class ContractInterface {
     ): Promise<BaseContract> {
         if (!this.contracts.has(name)) {
             const address = this.getContractAddress(name);
-            
+
             // Create contract with fallback support
             const contract = new BaseContract(
                 this.provider,
@@ -379,7 +379,7 @@ export class ContractInterface {
                 this.signer,
                 this.fallbackProviders
             );
-            
+
             this.contracts.set(name, contract);
         }
         return this.contracts.get(name)!;
@@ -396,7 +396,7 @@ export class ContractInterface {
 
     async getNEBLToken() {
         if (!this.signer) throw new Error("No signer available");
-        
+
         try {
             const address = this.getContractAddress('NEBLToken');
             const contract = new ethers.Contract(
@@ -419,7 +419,7 @@ export class ContractInterface {
 
             // Test contract responsiveness with a simple view call
             await contract.balanceOf(address);
-            
+
             return contract;
         } catch (error: any) {
             console.error('Error initializing NEBL token:', error);
@@ -464,21 +464,40 @@ export class ContractInterface {
             const marketplace = await this.getIPMarketplace();
             // eslint-disable-next-line @typescript-eslint/no-unused-vars
             const provider = new ethers.providers.JsonRpcProvider(WEB3_CONFIG.NETWORKS.TESTNET.rpcUrl[0]);
-            
+
             const listings = await marketplace.getActiveListings(startId, pageSize);
-            
+
             // Transform BigNumber values to expected types
             return listings
                 .filter((listing: Listing) => listing.isActive && listing.price.gt(0))
-                .map((listing: Listing) => ({
-                    listingId: listing.listingId.toNumber(),
-                    tokenId: listing.tokenId.toNumber(),
-                    seller: listing.seller,
-                    price: ethers.utils.formatEther(listing.price),
-                    isActive: listing.isActive,
-                    isLicense: listing.isLicense,
-                    licenseDuration: listing.licenseDuration.toNumber()
-                }));
+                .map((listing: Listing) => {
+                    // Get the price in AVAX
+                    let adjustedPrice;
+
+                    try {
+                        // Format the price using ethers utils
+                        const priceInEther = ethers.utils.formatEther(listing.price);
+
+                        // Remove trailing .0 if present
+                        adjustedPrice = priceInEther.replace(/\.0+$/, '');
+
+                        console.log(`Listing ${listing.listingId}: Raw price=${priceInEther}, Adjusted price=${adjustedPrice}`);
+                    } catch (err) {
+                        console.warn(`Error formatting price for listing ${listing.listingId}:`, err);
+                        // Fallback to direct string conversion if formatEther fails
+                        adjustedPrice = listing.price.toString();
+                    }
+
+                    return {
+                        listingId: listing.listingId.toNumber(),
+                        tokenId: listing.tokenId.toNumber(),
+                        seller: listing.seller,
+                        price: adjustedPrice,
+                        isActive: listing.isActive,
+                        isLicense: listing.isLicense,
+                        licenseDuration: listing.licenseDuration.toNumber()
+                    };
+                });
         } catch (error) {
             console.error('Failed to fetch active listings:', error);
             throw new Error('Failed to load marketplace listings. Please try again.');
@@ -488,34 +507,111 @@ export class ContractInterface {
     // Add createListing method
     async createListing(tokenId: number, price: string, isLicense: boolean, licenseDuration: number) {
         const marketplace = await this.getIPMarketplace();
-            
-        // Execute listing creation with higher gas limit for safety
-        const gasEstimate = await marketplace.estimateGas.createListing(
-            tokenId,
-            ethers.utils.parseEther(price),
-            isLicense,
-            licenseDuration
-        );
-        
+
         try {
+            // Validate the price is a valid number
+            const priceFloat = parseFloat(price);
+            if (isNaN(priceFloat) || priceFloat <= 0) {
+                throw new Error('Please enter a valid price greater than 0');
+            }
+
+            // Format the price to ensure it's compatible with parseEther
+            // Remove any commas and ensure it's a valid decimal string
+            const adjustedPrice = price.replace(/,/g, '');
+
+            console.log("Original price:", price, "AVAX");
+            console.log("Adjusted price for contract:", adjustedPrice, "AVAX");
+
+            // Ensure the price is in a format that parseEther can handle
+            // If it's a decimal like 0.0001, make sure it's properly formatted
+            let formattedPrice = adjustedPrice;
+            let priceInWei;
+
+            try {
+                // Try to parse the price
+                priceInWei = ethers.utils.parseEther(formattedPrice);
+                console.log("Price in Wei:", priceInWei.toString());
+            } catch (error: any) {
+                // If there's an error, try to fix common formatting issues
+                if (error.code === "INVALID_ARGUMENT") {
+                    console.log("Invalid argument error, attempting to fix price format");
+
+                    // Try to convert scientific notation to decimal string
+                    if (/e[+-]/.test(formattedPrice)) {
+                        formattedPrice = Number(formattedPrice).toFixed(18);
+                    }
+
+                    // Ensure there's no trailing zeros that might cause issues
+                    formattedPrice = formattedPrice.replace(/(\.\d*?)0+$/, '$1');
+
+                    console.log("Reformatted price:", formattedPrice);
+                    priceInWei = ethers.utils.parseEther(formattedPrice);
+                    console.log("Price in Wei after reformatting:", priceInWei.toString());
+                } else {
+                    throw error;
+                }
+            }
+
+            // Execute listing creation with higher gas limit for safety
+            const gasEstimate = await marketplace.estimateGas.createListing(
+                tokenId,
+                priceInWei,
+                isLicense,
+                licenseDuration
+            );
+
+            console.log("Estimated gas for createListing:", gasEstimate.toString());
+
             const tx = await marketplace.createListing(
                 tokenId,
-                ethers.utils.parseEther(price),
+                priceInWei,
                 isLicense,
                 licenseDuration,
                 {
                     gasLimit: gasEstimate.mul(120).div(100) // Add 20% buffer
                 }
             );
-    
+
+            console.log("Transaction sent:", tx);
+
             // Check if wait is a function before calling it
             if (tx && typeof tx.wait === 'function') {
-                return await tx.wait();
+                console.log("Waiting for transaction confirmation...");
+                const receipt = await tx.wait(1); // Wait for 1 confirmation
+                console.log("Transaction confirmed:", receipt);
+                return receipt;
             } else {
-                // If tx.wait is not a function, the transaction might already be processed
-                // or we're getting a different type of response
-                console.log("Transaction completed, but wait function not available:", tx);
-                return tx; // Return the transaction object as is
+                // If tx.wait is not a function, we need to handle this case
+                console.log("Transaction object doesn't have wait function:", tx);
+
+                // If it's a transaction hash, we can manually wait for it
+                if (typeof tx === 'string' || (tx && tx.hash)) {
+                    const txHash = typeof tx === 'string' ? tx : tx.hash;
+                    console.log("Waiting for transaction by hash:", txHash);
+
+                    // Wait for the transaction to be mined
+                    let receipt = null;
+                    let retries = 10;
+
+                    while (retries > 0 && !receipt) {
+                        try {
+                            receipt = await this.provider.getTransactionReceipt(txHash);
+                            if (receipt) {
+                                console.log("Transaction confirmed manually:", receipt);
+                                return receipt;
+                            }
+                        } catch (err) {
+                            console.warn("Error checking receipt, retrying...", err);
+                        }
+
+                        // Wait before retrying
+                        await new Promise(resolve => setTimeout(resolve, 2000));
+                        retries--;
+                    }
+                }
+
+                // If we can't wait for it, return the transaction as is
+                return tx;
             }
         } catch (error) {
             console.error("Error creating listing:", error);
@@ -532,7 +628,7 @@ export class ContractInterface {
         const ipToken = await this.getIPToken();
         const tx = await ipToken.createIP(title, description, uri, licenseTerms);
         const receipt = await tx.wait();
-        
+
         // Find the IPCreated event in the receipt
         const event = receipt.events?.find((e: ethers.Event) => e.event === 'IPCreated') as ethers.Event & { args: IPCreatedEventArgs };
         if (event && event.args) {
@@ -550,7 +646,7 @@ export class ContractInterface {
 
             // Get the current block number
             const latestBlock = await provider.getBlockNumber();
-            
+
             // Start from a reasonable point in the past (last ~2 weeks of blocks)
             const startBlock = Math.max(0, latestBlock - 100800); // ~2 weeks of blocks at 12s/block
             const tokenIds = new Set<string>();
@@ -558,7 +654,7 @@ export class ContractInterface {
             // Fetch transfer events in chunks
             for (let fromBlock = startBlock; fromBlock <= latestBlock; fromBlock += MAX_BLOCK_RANGE) {
                 const toBlock = Math.min(fromBlock + MAX_BLOCK_RANGE - 1, latestBlock);
-                
+
                 try {
                     const transferFilter = contract.filters.Transfer(null, address, null);
                     const events = await contract.queryFilter(transferFilter, fromBlock, toBlock);
@@ -657,11 +753,11 @@ export class ContractInterface {
             }
 
             const neblToken = await this.getNEBLToken();
-            
+
             const balance = await Promise.race([
                 neblToken.balanceOf(address),
-                new Promise((_, reject) => 
-                    setTimeout(() => reject(new Error('Balance fetch timeout')), 
+                new Promise((_, reject) =>
+                    setTimeout(() => reject(new Error('Balance fetch timeout')),
                     WEB3_CONFIG.ETHERS_CONFIG.timeout)
                 )
             ]);
@@ -688,10 +784,10 @@ export class ContractInterface {
         deadline: number
     ) {
         const researchProject = await this.getResearchProject();
-        
+
         // Convert milestone target amounts from ETH to Wei
         const targetsWei = milestoneTargets.map(t => ethers.utils.parseEther(t));
-        
+
         // Return the transaction first for the caller to wait on
         return researchProject.createProject(
             title,
@@ -711,16 +807,16 @@ export class ContractInterface {
             console.log('Project ID:', projectId);
             console.log('Milestone ID:', milestoneId);
             console.log('Amount (before parsing):', amount);
-            
+
             const amountWei = ethers.utils.parseEther(amount);
             console.log('Amount in Wei:', amountWei.toString());
-            
+
             // Check project deadline before attempting transaction
             try {
                 const project = await researchProject.getProject(projectId);
                 const deadlineTimestamp = project.deadline.toNumber() * 1000; // Convert to milliseconds
                 const currentTimestamp = Date.now();
-                
+
                 if (currentTimestamp > deadlineTimestamp) {
                     throw new Error(`Funding deadline passed. Project deadline was ${new Date(deadlineTimestamp).toLocaleString()}`);
                 }
@@ -731,28 +827,28 @@ export class ContractInterface {
                 // If it's another error with project fetching, continue with the transaction
                 console.warn('Could not verify project deadline:', err);
             }
-            
+
             const tx = await researchProject.fundProject(projectId, milestoneId, {
                 value: amountWei
             });
-            
+
             return await tx.wait();
         } catch (error: any) {
             console.error('fundProjectMilestone error:', error);
-            
+
             // Check for specific error messages from contract
-            if (error.data?.message?.includes('Funding deadline passed') || 
+            if (error.data?.message?.includes('Funding deadline passed') ||
                 error.message?.includes('Funding deadline passed')) {
                 throw new Error('Funding deadline for this project has passed. You cannot fund it anymore.');
             }
-            
+
             // Check for other common errors
             if (error.code === 'INSUFFICIENT_FUNDS') {
                 throw new Error('Insufficient balance to complete this transaction.');
             } else if (error.code === 'ACTION_REJECTED' || error.code === 4001) {
                 throw new Error('Transaction was rejected. Please try again.');
             }
-            
+
             throw error;
         }
     }
@@ -762,16 +858,16 @@ export class ContractInterface {
             const researchProject = await this.getResearchProject();
             console.log('Project ID:', projectId);
             console.log('Amount (before parsing):', amount);
-            
+
             const amountWei = ethers.utils.parseEther(amount);
             console.log('Amount in Wei:', amountWei.toString());
-            
+
             // Check project deadline before attempting transaction
             try {
                 const project = await researchProject.getProject(projectId);
                 const deadlineTimestamp = project.deadline.toNumber() * 1000; // Convert to milliseconds
                 const currentTimestamp = Date.now();
-                
+
                 if (currentTimestamp > deadlineTimestamp) {
                     throw new Error(`Funding deadline passed. Project deadline was ${new Date(deadlineTimestamp).toLocaleString()}`);
                 }
@@ -782,28 +878,28 @@ export class ContractInterface {
                 // If it's another error with project fetching, continue with the transaction
                 console.warn('Could not verify project deadline:', err);
             }
-            
+
             const tx = await researchProject.fundProject(projectId, {
                 value: amountWei
             });
-            
+
             return await tx.wait();
         } catch (error: any) {
             console.error('fundProject error:', error);
-            
+
             // Check for specific error messages from contract
-            if (error.data?.message?.includes('Funding deadline passed') || 
+            if (error.data?.message?.includes('Funding deadline passed') ||
                 error.message?.includes('Funding deadline passed')) {
                 throw new Error('Funding deadline for this project has passed. You cannot fund it anymore.');
             }
-            
+
             // Check for other common errors
             if (error.code === 'INSUFFICIENT_FUNDS') {
                 throw new Error('Insufficient balance to complete this transaction.');
             } else if (error.code === 'ACTION_REJECTED' || error.code === 4001) {
                 throw new Error('Transaction was rejected. Please try again.');
             }
-            
+
             throw error;
         }
     }
@@ -851,11 +947,11 @@ export class ContractInterface {
 
     async getProjectDetails(projectId: string): Promise<ProjectDetails> {
         const researchProject = await this.getResearchProject();
-        
+
         try {
             // Get main project details
             const project = await researchProject.getProject(projectId);
-            
+
             // Better null check for project existence
             if (!project || project.title === '') {
                 throw new Error('Project not found');
@@ -867,7 +963,7 @@ export class ContractInterface {
                 try {
                     const milestone = await researchProject.getMilestone(projectId, milestoneId);
                     if (!milestone || milestone.description === '') return null;
-                    
+
                     return {
                         description: milestone.description,
                         targetAmount: milestone.targetAmount.toString(),
@@ -919,8 +1015,8 @@ export class ContractInterface {
             };
         } catch (err) {
             console.error('Error loading project details:', err);
-            if (err instanceof Error && 
-                (err.message.includes('project not found') || 
+            if (err instanceof Error &&
+                (err.message.includes('project not found') ||
                  err.message.includes('Project not found'))) {
                 throw new Error('Project not found');
             }
@@ -965,7 +1061,7 @@ export class ContractInterface {
             if (!oracle || !oracle.contract) {
                 throw new Error('Oracle contract not initialized');
             }
-            
+
             // Prepare verification request with all required arguments
             const tx = await oracle.contract.requestVerification(
                 request.projectId,
@@ -1119,13 +1215,13 @@ export class ContractInterface {
             if (!neblSwap) {
                 throw new Error('Failed to connect to swap contract');
             }
-            
+
             // Check if the function exists on the contract
             if (typeof neblSwap.calculateNEBLAmount !== 'function') {
                 console.error('calculateNEBLAmount function not found on contract');
                 throw new Error('Swap calculation function not available');
             }
-            
+
         const avaxAmountWei = ethers.utils.parseEther(avaxAmount);
             const expectedAmount = await neblSwap.calculateNEBLAmount(avaxAmountWei);
             return expectedAmount;
@@ -1141,13 +1237,13 @@ export class ContractInterface {
             if (!neblSwap) {
                 throw new Error('Failed to connect to swap contract');
             }
-            
+
             // Check if the function exists on the contract
             if (typeof neblSwap.calculateAVAXAmount !== 'function') {
                 console.error('calculateAVAXAmount function not found on contract');
                 throw new Error('Swap calculation function not available');
             }
-            
+
             const neblAmountWei = ethers.utils.parseEther(neblAmount);
             const expectedAmount = await neblSwap.calculateAVAXAmount(neblAmountWei);
             return expectedAmount;
@@ -1171,7 +1267,7 @@ export class ContractInterface {
             }
 
             // Check if required functions exist
-            if (typeof neblSwap.calculateAVAXAmount !== 'function' || 
+            if (typeof neblSwap.calculateAVAXAmount !== 'function' ||
                 typeof neblSwap.swapNEBLForAVAX !== 'function') {
                 console.error('Required swap functions not found on contract');
                 throw new Error('Swap functionality not available');
@@ -1179,7 +1275,7 @@ export class ContractInterface {
 
             const neblToken = await this.getNEBLToken();
             const neblAmountWei = ethers.utils.parseEther(neblAmount);
-            
+
             // Get expected AVAX amount first
             const expectedAVAX = await neblSwap.calculateAVAXAmount(neblAmountWei);
             if (!expectedAVAX || expectedAVAX.isZero()) {
@@ -1194,7 +1290,7 @@ export class ContractInterface {
             const swapContractBalance = await this.provider.getBalance(neblSwap.address);
             console.log('Swap contract AVAX balance:', ethers.utils.formatEther(swapContractBalance));
             console.log('Expected AVAX amount:', ethers.utils.formatEther(expectedAVAX));
-            
+
             // Add 1% buffer to account for any price changes
             const requiredLiquidity = expectedAVAX.mul(101).div(100);
             if (swapContractBalance.lt(requiredLiquidity)) {
@@ -1226,7 +1322,7 @@ export class ContractInterface {
         } catch (error: any) {
             console.error('Swap failed:', error);
             // Check for specific error messages in the error data
-            if (error.data?.message?.includes('Insufficient AVAX liquidity') || 
+            if (error.data?.message?.includes('Insufficient AVAX liquidity') ||
                 error.message?.includes('Insufficient AVAX liquidity')) {
                 throw new Error('Insufficient AVAX liquidity in the swap contract. Please try a smaller amount or try again later.');
             }
@@ -1253,16 +1349,16 @@ export class ContractInterface {
             if (!neblSwap) {
                 throw new Error('Failed to connect to swap contract');
             }
-            
+
             // Check if required functions exist
-            if (typeof neblSwap.calculateNEBLAmount !== 'function' || 
+            if (typeof neblSwap.calculateNEBLAmount !== 'function' ||
                 typeof neblSwap.swapAVAXForNEBL !== 'function') {
                 console.error('Required swap functions not found on contract');
                 throw new Error('Swap functionality not available');
             }
-            
+
             const avaxAmountWei = ethers.utils.parseEther(avaxAmount);
-            
+
             // Get expected NEBL amount first
             const expectedNebl = await neblSwap.calculateNEBLAmount(avaxAmountWei);
             if (!expectedNebl || expectedNebl.isZero()) {
@@ -1272,7 +1368,7 @@ export class ContractInterface {
             // Verify contract state and liquidity
             const neblToken = await this.getNEBLToken();
             const swapBalance = await neblToken.balanceOf(neblSwap.address);
-            
+
             // Add 1% buffer to the expected amount to account for any price changes
             const requiredLiquidity = expectedNebl.mul(101).div(100);
             if (swapBalance.lt(requiredLiquidity)) {
@@ -1314,12 +1410,12 @@ export class ContractInterface {
 
     async watchToken() {
         if (!window.ethereum) throw new Error('MetaMask is not installed');
-        
+
         const neblToken = await this.getNEBLToken();
         const address = await neblToken.address;
         const symbol = await neblToken.symbol();
         const decimals = await neblToken.decimals();
-        
+
         try {
             await window.ethereum.request({
                 method: 'wallet_watchAsset',
@@ -1350,81 +1446,100 @@ export class ContractInterface {
             }
 
             const ipMarketplace = await this.getIPMarketplace();
-            const priceWei = ethers.utils.parseEther(price);
-            
-            console.log(`Attempting to purchase listing ${listingId} for ${price} AVAX (${priceWei.toString()} wei)`);
-            
-            // First verify the listing exists and get its actual price
+
+            // First verify the listing exists and get its actual price from the contract
             const listing = await ipMarketplace.getListing(listingId);
             if (!listing || !listing.listingId) {
                 throw new Error(`Listing ${listingId} not found`);
             }
-            
+
+            // Use the precise listing price from the contract
+            const listingPrice = listing.price;
+            const formattedListingPrice = ethers.utils.formatEther(listingPrice);
+
             console.log('Listing found:', {
                 listingId: listing.listingId.toString(),
                 tokenId: listing.tokenId.toString(),
-                price: ethers.utils.formatEther(listing.price),
-                priceWei: listing.price.toString(),
+                price: formattedListingPrice,
+                priceWei: listingPrice.toString(),
                 isActive: listing.isActive,
                 seller: listing.seller
             });
-            
+
+            console.log(`Attempting to purchase listing ${listingId} for ${formattedListingPrice} AVAX (${listingPrice.toString()} wei)`);
+
             if (!listing.isActive) {
                 throw new Error('Listing is no longer active');
             }
-            
-            // Use the precise listing price from the contract
-            const listingPrice = listing.price;
-            
-            // Check if prices match
-            if (!listingPrice.eq(priceWei)) {
-                console.error('Price mismatch:', {
-                    providedPrice: priceWei.toString(),
-                    listingPrice: listingPrice.toString(),
-                    difference: priceWei.sub(listingPrice).toString()
-                });
-                throw new Error(`Price mismatch. Required: ${ethers.utils.formatEther(listingPrice)} AVAX, Provided: ${price} AVAX`);
-            }
-            
+
+            // We'll use the contract's price directly rather than parsing the provided price
+            // This avoids any precision issues with string conversion
+
             // Use a manual gas limit to bypass estimation errors
             const manualGasLimit = ethers.BigNumber.from('500000'); // Conservative gas limit
-            
+
             // Check if user has enough balance
             const signerAddress = await this.signer.getAddress();
             const balance = await this.provider.getBalance(signerAddress);
             const gasPrice = await this.provider.getGasPrice();
-            const requiredBalance = listingPrice.add(manualGasLimit.mul(gasPrice));
-            
+
+            // Add a buffer to the gas estimate to ensure we have enough
+            const estimatedGasCost = manualGasLimit.mul(gasPrice).mul(120).div(100); // 20% buffer
+            const requiredBalance = listingPrice.add(estimatedGasCost);
+
+            // Format values for display
+            const formattedBalance = ethers.utils.formatEther(balance);
+            const formattedRequired = ethers.utils.formatEther(requiredBalance);
+            // We already have formattedListingPrice from earlier in the function
+            const formattedGasCost = ethers.utils.formatEther(estimatedGasCost);
+
             console.log('Balance check:', {
-                balance: ethers.utils.formatEther(balance),
-                requiredBalance: ethers.utils.formatEther(requiredBalance),
-                listingPrice: ethers.utils.formatEther(listingPrice),
-                estimatedGas: ethers.utils.formatEther(manualGasLimit.mul(gasPrice))
+                balance: formattedBalance,
+                requiredBalance: formattedRequired,
+                listingPrice: formattedListingPrice,
+                estimatedGas: formattedGasCost
             });
-            
+
             if (balance.lt(requiredBalance)) {
-                throw new Error(`Insufficient balance. Required: ${ethers.utils.formatEther(requiredBalance)} AVAX, Available: ${ethers.utils.formatEther(balance)} AVAX`);
+                // Format for display with fixed precision
+                const displayBalance = parseFloat(formattedBalance).toFixed(6);
+                const displayRequired = parseFloat(formattedRequired).toFixed(6);
+                throw new Error(`Insufficient balance. Required: ${displayRequired} AVAX, Available: ${displayBalance} AVAX`);
             }
 
             // Execute purchase with manual gas limit
             console.log('Sending transaction with params:', {
                 listingId,
                 value: ethers.utils.formatEther(listingPrice),
+                valueWei: listingPrice.toString(),
                 gasLimit: manualGasLimit.toString(),
                 gasPrice: gasPrice.toString()
             });
-            
-            const tx = await ipMarketplace.purchase(listingId, {
-                value: listingPrice,
-                gasLimit: manualGasLimit,
-                gasPrice: gasPrice
-            });
-            
+
+            // Check if the contract has a purchase or purchaseListing method
+            let tx;
+            try {
+                // Try purchaseListing first (the correct method name)
+                tx = await ipMarketplace.purchaseListing(listingId, {
+                    value: listingPrice,
+                    gasLimit: manualGasLimit,
+                    gasPrice: gasPrice
+                });
+            } catch (err) {
+                console.log('purchaseListing failed, trying purchase method instead:', err);
+                // Fallback to purchase method
+                tx = await ipMarketplace.purchase(listingId, {
+                    value: listingPrice,
+                    gasLimit: manualGasLimit,
+                    gasPrice: gasPrice
+                });
+            }
+
             console.log('Transaction sent:', tx.hash);
             return await tx.wait();
         } catch (error: any) {
             console.error('Purchase failed:', error);
-            
+
             // Extract the detailed error message from RPC error if available
             let errorMessage = error.message || 'Unknown error';
             if (error.error && error.error.message) {
@@ -1432,7 +1547,7 @@ export class ContractInterface {
             } else if (error.data && error.data.message) {
                 errorMessage = error.data.message;
             }
-            
+
             if (error.code === 4001) {
                 throw new Error('Transaction rejected by user');
             } else if (errorMessage.includes('Insufficient payment')) {
@@ -1446,10 +1561,10 @@ export class ContractInterface {
                 } catch (subError) {
                     // Fall back to generic message if we can't get the listing
                 }
-                
+
                 throw new Error('Insufficient payment amount. The contract requires a different amount than provided.');
             }
-            
+
             throw new Error(`Failed to purchase listing: ${errorMessage}`);
         }
     }
@@ -1472,17 +1587,17 @@ export class ContractInterface {
     ): Promise<NonNullable<Awaited<R>>[]> {
         const results: NonNullable<Awaited<R>>[] = [];
         let activeBatches = 0;
-        
+
         while (activeBatches >= WEB3_CONFIG.ETHERS_CONFIG.rpcConfig.maxConcurrentBatches) {
             await new Promise(resolve => setTimeout(resolve, 100));
         }
-        
+
         activeBatches++;
-        
+
         try {
             for (let i = 0; i < items.length; i += batchSize) {
                 if (i > 0) {
-                    await new Promise(resolve => 
+                    await new Promise(resolve =>
                         setTimeout(resolve, Math.min(1000 * Math.pow(2, i / batchSize), 10000))
                     );
                 }
@@ -1498,16 +1613,16 @@ export class ContractInterface {
                 });
 
                 const batchResults = await Promise.all(batchPromises);
-                
+
                 const validResults = batchResults
-                    .filter((result): result is { status: 'fulfilled', value: NonNullable<Awaited<R>> } => 
+                    .filter((result): result is { status: 'fulfilled', value: NonNullable<Awaited<R>> } =>
                         result.status === 'fulfilled' && result.value != null
                     )
                     .map(result => result.value);
-                
+
                 results.push(...validResults);
             }
-            
+
             return results;
         } finally {
             activeBatches--;
@@ -1519,26 +1634,26 @@ export class ContractInterface {
         maxRetries: number = WEB3_CONFIG.ETHERS_CONFIG.rpcConfig.maxRetries
     ): Promise<T> {
         let lastError: Error | null = null;
-        
+
         for (let attempt = 0; attempt <= maxRetries; attempt++) {
             try {
                 return await operation();
             } catch (err: any) {
                 lastError = err;
                 if (attempt === maxRetries) break;
-                
+
                 if (!this.isNetworkError(err)) {
                     throw err;
                 }
-                
-                await new Promise(resolve => 
-                    setTimeout(resolve, 
+
+                await new Promise(resolve =>
+                    setTimeout(resolve,
                         WEB3_CONFIG.ETHERS_CONFIG.rpcConfig.customBackoff(attempt)
                     )
                 );
             }
         }
-        
+
         throw lastError;
     }
 
