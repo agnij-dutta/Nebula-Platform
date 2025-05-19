@@ -233,16 +233,60 @@
   color: #ef4444;
 }
 
-.loading, .error {
+.loading {
   text-align: center;
   padding: 3rem;
   color: rgba(var(--foreground-rgb), 0.6);
 }
 
+.error-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 50vh;
+  padding: 2rem;
+}
+
 .error {
+  text-align: center;
+  padding: 3rem;
   color: #ef4444;
   background: rgba(239, 68, 68, 0.1);
+  border-radius: 16px;
+  max-width: 600px;
+  width: 100%;
+  box-shadow: 0 4px 12px rgba(239, 68, 68, 0.2);
+}
+
+.error h2 {
+  margin-bottom: 1rem;
+  font-size: 1.8rem;
+  color: #ef4444;
+}
+
+.error p {
+  margin-bottom: 2rem;
+  line-height: 1.6;
+}
+
+.retry-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1.5rem;
+  background: rgba(139, 92, 246, 0.1);
+  border: 1px solid rgba(139, 92, 246, 0.3);
   border-radius: 8px;
+  color: #8B5CF6;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  margin-left: 1rem;
+}
+
+.retry-button:hover {
+  background: rgba(139, 92, 246, 0.2);
+  transform: translateY(-2px);
 }
 
 .milestones {

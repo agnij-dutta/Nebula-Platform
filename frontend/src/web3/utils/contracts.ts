@@ -360,6 +360,35 @@ export class ContractInterface {
         }
     }
 
+    // Helper method to execute a contract call with retries
+    async executeWithRetry<T>(
+        operation: () => Promise<T>,
+        maxRetries: number = 3
+    ): Promise<T> {
+        let lastError: Error | null = null;
+
+        for (let attempt = 0; attempt <= maxRetries; attempt++) {
+            try {
+                return await operation();
+            } catch (err: any) {
+                console.warn(`Contract call attempt ${attempt + 1} failed:`, err);
+                lastError = err;
+
+                if (attempt === maxRetries) break;
+
+                // Wait with exponential backoff before retrying
+                const delay = Math.min(1000 * Math.pow(2, attempt), 10000);
+                await new Promise(resolve => setTimeout(resolve, delay));
+            }
+        }
+
+        if (lastError) {
+            throw lastError;
+        }
+
+        throw new Error('Operation failed after multiple retries');
+    }
+
     private getContractAddress(contractName: keyof typeof WEB3_CONFIG.CONTRACTS): string {
         return WEB3_CONFIG.CONTRACTS[contractName].address;
     }
@@ -946,39 +975,73 @@ export class ContractInterface {
     }
 
     async getProjectDetails(projectId: string): Promise<ProjectDetails> {
-        const researchProject = await this.getResearchProject();
-
         try {
-            // Get main project details
-            const project = await researchProject.getProject(projectId);
+            // Get contract with retry mechanism
+            const researchProject = await this.getResearchProject();
 
-            // Better null check for project existence
-            if (!project || project.title === '') {
-                throw new Error('Project not found');
-            }
+            // Log for debugging
+            console.log(`Attempting to get project details for ID: ${projectId}`);
+            console.log(`Using ResearchProject contract at: ${await researchProject.address}`);
 
-            // Get milestone details with retry
-            const maxMilestones = 20;
-            const getMilestoneWithRetry = async (milestoneId: number) => {
-                try {
-                    const milestone = await researchProject.getMilestone(projectId, milestoneId);
-                    if (!milestone || milestone.description === '') return null;
+            try {
+                // Get main project details with retry
+                const project = await this.executeWithRetry(
+                    () => researchProject.getProject(projectId),
+                    3
+                ) as {
+                    title: string;
+                    description: string;
+                    researcher: string;
+                    totalFunding: ethers.BigNumber;
+                    currentFunding: ethers.BigNumber;
+                    isActive: boolean;
+                    category: string;
+                    createdAt: ethers.BigNumber;
+                    deadline: ethers.BigNumber;
+                    metadataURI: string;
+                };
 
-                    return {
-                        description: milestone.description,
-                        targetAmount: milestone.targetAmount.toString(),
-                        currentAmount: milestone.currentAmount.toString(),
-                        isCompleted: milestone.isCompleted,
-                        fundsReleased: milestone.fundsReleased,
-                        verificationCriteria: milestone.verificationCriteria,
-                        verificationCID: milestone.verificationCID || '' // Add missing property
-                    };
-                } catch {
-                    return null;
+                // Better null check for project existence
+                if (!project || project.title === '') {
+                    console.error(`Project with ID ${projectId} not found or has empty title`);
+                    throw new Error('Project not found');
                 }
-            };
 
-            // Load all milestones in parallel
+                // Get milestone details with retry
+                const maxMilestones = 20;
+                const getMilestoneWithRetry = async (milestoneId: number) => {
+                    try {
+                        const milestone = await this.executeWithRetry(
+                            () => researchProject.getMilestone(projectId, milestoneId),
+                            2
+                        ) as {
+                            description: string;
+                            targetAmount: ethers.BigNumber;
+                            currentAmount: ethers.BigNumber;
+                            isCompleted: boolean;
+                            fundsReleased: boolean;
+                            verificationCriteria: string;
+                            verificationCID?: string;
+                        };
+
+                        if (!milestone || milestone.description === '') return null;
+
+                        return {
+                            description: milestone.description,
+                            targetAmount: milestone.targetAmount.toString(),
+                            currentAmount: milestone.currentAmount.toString(),
+                            isCompleted: milestone.isCompleted,
+                            fundsReleased: milestone.fundsReleased,
+                            verificationCriteria: milestone.verificationCriteria || '',
+                            verificationCID: milestone.verificationCID || '' // Add missing property
+                        };
+                    } catch (err) {
+                        console.warn(`Failed to get milestone ${milestoneId} for project ${projectId}:`, err);
+                        return null;
+                    }
+                };
+
+            // Load all milestones in parallel with better error handling
             const milestonePromises = Array.from(
                 { length: maxMilestones },
                 (_, index) => getMilestoneWithRetry(index + 1)
@@ -987,11 +1050,12 @@ export class ContractInterface {
             const milestones = (await Promise.all(milestonePromises))
                 .filter((m): m is NonNullable<typeof m> => m !== null);
 
+            // Allow projects with no milestones (though this should be rare)
             if (milestones.length === 0) {
-                throw new Error('No milestones found for project');
+                console.warn(`No milestones found for project ${projectId}, but continuing with project data`);
             }
 
-            return {
+            const projectDetails = {
                 projectId,
                 title: project.title,
                 description: project.description,
@@ -1009,17 +1073,41 @@ export class ContractInterface {
                     currentAmount: ethers.BigNumber.from(m.currentAmount).toString(),
                     isCompleted: m.isCompleted,
                     fundsReleased: m.fundsReleased,
-                    verificationCriteria: m.verificationCriteria,
-                    verificationCID: m.verificationCID || '' // Add missing property
+                    verificationCriteria: m.verificationCriteria || '',
+                    verificationCID: m.verificationCID || ''
                 }))
             };
+
+            console.log(`Successfully loaded project details for ID ${projectId}:`, projectDetails);
+            return projectDetails;
+
+            } catch (err) {
+                console.error(`Error in inner try block for project ${projectId}:`, err);
+                throw err; // Re-throw to be caught by outer try-catch
+            }
         } catch (err) {
             console.error('Error loading project details:', err);
-            if (err instanceof Error &&
-                (err.message.includes('project not found') ||
-                 err.message.includes('Project not found'))) {
-                throw new Error('Project not found');
+
+            // Check for specific error types
+            if (err instanceof Error) {
+                const errorMessage = err.message.toLowerCase();
+
+                if (errorMessage.includes('project not found') ||
+                    errorMessage.includes('invalid project id') ||
+                    errorMessage.includes('out of bounds') ||
+                    errorMessage.includes('nonexistent token')) {
+                    console.error(`Project with ID ${projectId} not found`);
+                    throw new Error('Project not found');
+                }
+
+                if (errorMessage.includes('network') ||
+                    errorMessage.includes('connection') ||
+                    err.stack?.includes('timeout')) {
+                    throw new Error('Network error while loading project. Please check your connection and try again.');
+                }
             }
+
+            // Generic fallback error
             throw new Error('Failed to load project details. Please try again.');
         }
     }
@@ -1525,6 +1613,11 @@ export class ContractInterface {
                     gasLimit: manualGasLimit,
                     gasPrice: gasPrice
                 });
+
+                console.log('Transaction sent:', tx);
+
+                // Return the transaction object so the caller can wait for it
+                return tx;
             } catch (err) {
                 console.log('purchaseListing failed, trying purchase method instead:', err);
                 // Fallback to purchase method
@@ -1533,10 +1626,12 @@ export class ContractInterface {
                     gasLimit: manualGasLimit,
                     gasPrice: gasPrice
                 });
-            }
 
-            console.log('Transaction sent:', tx.hash);
-            return await tx.wait();
+                console.log('Transaction sent (using purchase method):', tx);
+
+                // Return the transaction object so the caller can wait for it
+                return tx;
+            }
         } catch (error: any) {
             console.error('Purchase failed:', error);
 

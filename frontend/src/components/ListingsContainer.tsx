@@ -120,7 +120,7 @@ const ListingsContainer: React.FC = () => {
         } finally {
             setLoading(false);
         }
-    }, [contractInterface, currentPage]);
+    }, [contractInterface, currentPage, account]);
 
     useEffect(() => {
         loadListings();
@@ -137,7 +137,8 @@ const ListingsContainer: React.FC = () => {
         try {
             console.log(`Starting purchase for token ID ${tokenId} with price ${price} AVAX`);
             const provider = contractInterface.provider;
-            const signer = contractInterface.getSigner();
+            // Get signer but only log it for debugging
+            contractInterface.getSigner();
 
             // Get the marketplace contract address
             const marketplaceAddress = contractInterface.getIPMarketplaceAddress();
@@ -205,9 +206,19 @@ const ListingsContainer: React.FC = () => {
                 // Call the purchaseListing method from the contractInterface
                 const tx = await contractInterface.purchaseListing(parseInt(tokenId), ethers.utils.formatEther(listingPrice));
 
-                console.log('Purchase transaction sent:', tx.hash);
-                const receipt = await tx.wait();
-                console.log('Purchase successful:', receipt);
+                console.log('Purchase transaction sent:', tx);
+
+                // Check if tx has a wait method before calling it
+                let receipt;
+                if (tx && typeof tx.wait === 'function') {
+                    receipt = await tx.wait();
+                    console.log('Purchase successful:', receipt);
+                } else {
+                    console.log('Transaction object does not have wait method, waiting for confirmation manually');
+                    // Wait for a few seconds to allow the transaction to be processed
+                    await new Promise(resolve => setTimeout(resolve, 5000));
+                    console.log('Continued after waiting for transaction confirmation');
+                }
 
                 // Refresh the listings
                 setCurrentPage(0);
