@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import { ethers } from 'ethers';
 import { useWeb3 } from '../web3/hooks/useWeb3';
 import OwnedTokens from './OwnedTokens';
 import './CreateListing.css';
