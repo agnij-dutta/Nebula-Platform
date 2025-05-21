@@ -1,0 +1,36 @@
+{
+  "name": "nebula-launchpad-nextjs",
+  "version": "0.1.0",
+  "description": "Nebula Platform - Next.js Implementation",
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@tanstack/react-query": "^5.76.1",
+    "@types/node": "^22.15.21",
+    "@types/react": "^19.1.5",
+    "@types/react-dom": "^19.1.5",
+    "@wagmi/core": "^1.4.12",
+    "@walletconnect/ethereum-provider": "^2.20.3",
+    "@walletconnect/web3-provider": "^1.8.0",
+    "axios": "^1.9.0",
+    "buffer": "^6.0.3",
+    "cross-fetch": "^4.1.0",
+    "ethers": "^5.7.2",
+    "next": "^15.3.2",
+    "pino-pretty": "^13.0.0",
+    "react": "^19.1.0",
+    "react-dom": "^19.1.0",
+    "react-hot-toast": "^2.5.2",
+    "styled-components": "^6.1.18",
+    "typescript": "^5.8.3",
+    "viem": "^1.21.4",
+    "wagmi": "^1.4.12"
+  }
+}
