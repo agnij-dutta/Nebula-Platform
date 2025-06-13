@@ -944,9 +944,32 @@ export class ContractInterface {
             const ipAsset = await this.getIPAsset();
             const listings = [];
             
-            for (let i = startId; i < startId + pageSize; i++) {
+            // Get the next listing ID to understand the range
+            let nextListingId;
+            try {
+                nextListingId = await marketplace.nextListingId();
+                console.log('Next listing ID from marketplace:', nextListingId.toString());
+            } catch (error) {
+                console.warn('Could not get nextListingId, using fallback method');
+                nextListingId = null;
+            }
+            
+            // If we have nextListingId, we can optimize by only checking valid range
+            let maxListingId = nextListingId ? nextListingId.toNumber() - 1 : startId + pageSize;
+            let actualStartId = Math.max(1, startId + 1); // Marketplace listing IDs start from 1, not 0
+            
+            console.log(`Checking listings from ID ${actualStartId} to ${Math.min(actualStartId + pageSize - 1, maxListingId)}`);
+            
+            for (let i = actualStartId; i <= Math.min(actualStartId + pageSize - 1, maxListingId); i++) {
                 try {
                     const listing = await marketplace.getListing(i);
+                    console.log(`Listing ${i}:`, {
+                        tokenId: listing.tokenId.toString(),
+                        seller: listing.seller,
+                        isActive: listing.isActive,
+                        price: ethers.utils.formatEther(listing.price)
+                    });
+                    
                     if (listing.isActive) {
                         // Validate that the token actually exists before including it
                         try {
@@ -968,11 +991,13 @@ export class ContractInterface {
                         }
                     }
                 } catch (error) {
-                    // Listing might not exist, continue
-                    break;
+                    // Listing might not exist, continue to next
+                    console.warn(`Listing ${i} does not exist or error occurred:`, error);
+                    continue;
                 }
             }
             
+            console.log(`Found ${listings.length} active listings`);
             return listings;
         } catch (error: any) {
             console.error('Error getting active listings:', error);

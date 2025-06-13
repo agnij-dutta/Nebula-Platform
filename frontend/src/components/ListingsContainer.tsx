@@ -119,10 +119,17 @@ const ListingsContainer: React.FC = () => {
             // Filter out null listings
             const validListings = processedListings.filter((listing): listing is IPTokenData => listing !== null);
 
-            // Filter out listings that the user already owns
-            const filteredListings = validListings.filter(listing => {
-                return !account || listing.owner.toLowerCase() !== account.toLowerCase();
-            });
+            console.log('Valid listings before filtering:', validListings.length);
+            console.log('Current account:', account);
+            console.log('Listings details:', validListings.map(l => ({
+                tokenId: l.tokenId,
+                owner: l.owner,
+                isOwned: account && l.owner.toLowerCase() === account.toLowerCase()
+            })));
+
+            // Don't filter out user's own listings - they should see them in the marketplace
+            // Users just won't be able to purchase their own listings (handled in purchase logic)
+            const filteredListings = validListings;
 
             setListings(prevListings =>
                 currentPage === 0 ? filteredListings : [...prevListings, ...filteredListings]
