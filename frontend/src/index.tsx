@@ -1,6 +1,5 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
-import { Toaster } from 'react-hot-toast';
 import { ThemeProvider } from 'styled-components';
 import './index.css';
 import App from './App';

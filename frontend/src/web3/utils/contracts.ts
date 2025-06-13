@@ -118,11 +118,12 @@ export class BaseContract {
             if (this.isNetworkError(error) && this.fallbackProviders.length > 0) {
                 for (const fallbackProvider of this.fallbackProviders) {
                     try {
-                        const fallbackContract = new ethers.Contract(
-                            this.contract.address,
-                            this.contract.interface,
-                            fallbackProvider
-                        );
+                        // Create fallback contract (currently unused but available for future implementation)
+                        // const fallbackContract = new ethers.Contract(
+                        //     this.contract.address,
+                        //     this.contract.interface,
+                        //     fallbackProvider
+                        // );
                         // Note: This will only work for read operations
                         return await operation();
                     } catch (fallbackError) {
@@ -546,8 +547,8 @@ export class ContractInterface {
             const ipAsset = await this.getIPAsset();
             const assets: IPAsset[] = [];
 
-            // Get licenses owned by the address
-            const balance = await licenseModule.balanceOf(address);
+            // Get licenses owned by the address (for future use)
+            // const balance = await licenseModule.balanceOf(address);
             
             // Query license creation events
             const currentBlock = await this.provider.getBlockNumber();
@@ -1192,7 +1193,8 @@ export class ContractInterface {
      */
     async getVerificationDetails(projectId: number, milestoneId: number) {
         try {
-            const oracle = await this.getMilestoneOracle();
+            // Future implementation will use oracle contract
+            // const oracle = await this.getMilestoneOracle();
             // This is a placeholder - implement based on your oracle contract
             return {
                 status: 'PENDING',
@@ -1263,7 +1265,8 @@ export class ContractInterface {
      */
     async getStakeInfo(address: string) {
         try {
-            const neblToken = await this.getNEBLToken();
+            // Future implementation will query NEBL token contract
+            // const neblToken = await this.getNEBLToken();
             // Implement based on your staking mechanism
             return {
                 amount: '0',

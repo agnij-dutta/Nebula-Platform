@@ -4,7 +4,6 @@ import { publicProvider } from 'wagmi/providers/public';
 import { jsonRpcProvider } from 'wagmi/providers/jsonRpc';
 import { MetaMaskConnector } from 'wagmi/connectors/metaMask';
 import { CoinbaseWalletConnector } from 'wagmi/connectors/coinbaseWallet';
-import { WalletConnectConnector } from 'wagmi/connectors/walletConnect';
 import { InjectedConnector } from 'wagmi/connectors/injected';
 import { WEB3_CONFIG } from './config';
 
