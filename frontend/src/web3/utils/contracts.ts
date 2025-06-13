@@ -116,13 +116,13 @@ export class BaseContract {
             return await operation();
         } catch (error: any) {
             if (this.isNetworkError(error) && this.fallbackProviders.length > 0) {
-                for (const fallbackProvider of this.fallbackProviders) {
+                for (const _fallbackProvider of this.fallbackProviders) {
                     try {
                         // Create fallback contract (currently unused but available for future implementation)
                         // const fallbackContract = new ethers.Contract(
                         //     this.contract.address,
                         //     this.contract.interface,
-                        //     fallbackProvider
+                        //     _fallbackProvider
                         // );
                         // Note: This will only work for read operations
                         return await operation();
