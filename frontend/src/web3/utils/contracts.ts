@@ -411,15 +411,20 @@ export class ContractInterface {
 
             // Get balance of the address
             const balance = await ipAsset.balanceOf(address);
+            console.log(`IP Asset balance for ${address}:`, balance.toString());
             
             // Since IPAsset doesn't inherit from ERC721Enumerable, we need to query events
             const currentBlock = await this.provider.getBlockNumber();
             const fromBlock = Math.max(0, currentBlock - WEB3_CONFIG.ETHERS_CONFIG.maxBlockRange);
             
+            console.log(`Querying IP asset events from block ${fromBlock} to ${currentBlock}`);
+            
             try {
                 // Query Transfer events to this address
                 const filter = ipAsset.filters.Transfer(null, address);
                 const events = await this.queryEventsInChunks(ipAsset, filter, fromBlock, 'latest');
+                
+                console.log(`Found ${events.length} transfer events to address ${address}`);
                 
                 // Get unique token IDs that are still owned by the address
                 const tokenIds = new Set<string>();
@@ -430,12 +435,33 @@ export class ContractInterface {
                         // Check if the address still owns this token
                         try {
                             const currentOwner = await ipAsset.ownerOf(tokenId);
+                            console.log(`Token ${tokenId} current owner: ${currentOwner}, target address: ${address}`);
                             if (currentOwner.toLowerCase() === address.toLowerCase()) {
                                 tokenIds.add(tokenId);
+                                console.log(`Added token ${tokenId} to owned tokens`);
                             }
                         } catch (error) {
                             // Token might not exist or have been burned
+                            console.warn(`Token ${tokenId} ownership check failed:`, error);
                             continue;
+                        }
+                    }
+                }
+
+                // Fallback: If no events found and balance > 0, try checking recent token IDs manually
+                if (tokenIds.size === 0 && balance.gt(0)) {
+                    console.log('No events found but balance > 0, trying manual token ID checks...');
+                    
+                    // Try checking token IDs 1-100 (recently created tokens)
+                    for (let i = 1; i <= 100; i++) {
+                        try {
+                            const owner = await ipAsset.ownerOf(i);
+                            if (owner.toLowerCase() === address.toLowerCase()) {
+                                tokenIds.add(i.toString());
+                                console.log(`Manually found owned token: ${i}`);
+                            }
+                        } catch (error) {
+                            // Token doesn't exist, continue
                         }
                     }
                 }
@@ -467,8 +493,43 @@ export class ContractInterface {
                 }
             } catch (error) {
                 console.error('Error querying IP asset events:', error);
+                
+                // If event querying fails, try manual check for small range
+                if (balance.gt(0)) {
+                    console.log('Event querying failed, trying manual ownership checks...');
+                    
+                    for (let i = 1; i <= 50; i++) {
+                        try {
+                            const owner = await ipAsset.ownerOf(i);
+                            if (owner.toLowerCase() === address.toLowerCase()) {
+                                try {
+                                    const metadata = await ipAsset.getIPMetadata(i.toString());
+                                    assets.push({
+                                        tokenId: i.toString(),
+                                        metadata: {
+                                            title: metadata.title,
+                                            description: metadata.description,
+                                            contentURI: metadata.contentURI,
+                                            tags: metadata.tags,
+                                            category: metadata.category,
+                                            createdAt: metadata.createdAt.toNumber()
+                                        },
+                                        owner: address,
+                                        derivatives: [],
+                                        parentToken: undefined
+                                    });
+                                } catch (metadataError) {
+                                    console.error(`Error loading metadata for token ${i}:`, metadataError);
+                                }
+                            }
+                        } catch (error) {
+                            // Token doesn't exist, continue
+                        }
+                    }
+                }
             }
 
+            console.log(`Returning ${assets.length} owned IP assets for ${address}`);
             return assets;
         } catch (error) {
             console.error('Error in getOwnedIPAssets:', error);
@@ -809,6 +870,50 @@ export class ContractInterface {
     }
 
     /**
+     * Check what IP token contract the marketplace is using
+     */
+    async getMarketplaceIPTokenAddress(): Promise<string> {
+        try {
+            const marketplace = await this.getIPMarketplace();
+            const ipTokenAddress = await marketplace.ipToken();
+            return ipTokenAddress;
+        } catch (error: any) {
+            console.error('Error getting marketplace IP token address:', error);
+            throw new Error(`Failed to get marketplace IP token address: ${error.message}`);
+        }
+    }
+
+    /**
+     * Debug marketplace configuration
+     */
+    async debugMarketplaceConfiguration() {
+        try {
+            const marketplaceIPToken = await this.getMarketplaceIPTokenAddress();
+            const currentIPAsset = this.getContractAddress('IPAsset');
+            const legacyIPToken = this.getContractAddress('IPToken');
+            
+            console.log('Marketplace Configuration Debug:', {
+                marketplaceAddress: this.getIPMarketplaceAddress(),
+                marketplaceConfiguredIPToken: marketplaceIPToken,
+                frontendIPAssetAddress: currentIPAsset,
+                frontendLegacyIPTokenAddress: legacyIPToken,
+                addressesMatch: marketplaceIPToken.toLowerCase() === currentIPAsset.toLowerCase(),
+                usesLegacyContract: marketplaceIPToken.toLowerCase() === legacyIPToken.toLowerCase()
+            });
+            
+            return {
+                marketplaceIPToken,
+                frontendIPAsset: currentIPAsset,
+                frontendLegacyIPToken: legacyIPToken,
+                isConfigurationMismatch: marketplaceIPToken.toLowerCase() !== currentIPAsset.toLowerCase()
+            };
+        } catch (error: any) {
+            console.error('Error debugging marketplace configuration:', error);
+            throw error;
+        }
+    }
+
+    /**
      * Create listing
      */
     async createListing(tokenId: number, price: string, isLicense: boolean, licenseDuration: number) {
@@ -836,21 +941,31 @@ export class ContractInterface {
     async getActiveListings(startId: number, pageSize: number): Promise<any[]> {
         try {
             const marketplace = await this.getIPMarketplace();
+            const ipAsset = await this.getIPAsset();
             const listings = [];
             
             for (let i = startId; i < startId + pageSize; i++) {
                 try {
                     const listing = await marketplace.getListing(i);
                     if (listing.isActive) {
-                        listings.push({
-                            listingId: i,
-                            tokenId: listing.tokenId.toString(),
-                            seller: listing.seller,
-                            price: listing.price,
-                            isActive: listing.isActive,
-                            isLicense: listing.isLicense,
-                            licenseDuration: listing.licenseDuration
-                        });
+                        // Validate that the token actually exists before including it
+                        try {
+                            await ipAsset.ownerOf(listing.tokenId);
+                            // Token exists, include the listing
+                            listings.push({
+                                listingId: i,
+                                tokenId: listing.tokenId.toString(),
+                                seller: listing.seller,
+                                price: listing.price,
+                                isActive: listing.isActive,
+                                isLicense: listing.isLicense,
+                                licenseDuration: listing.licenseDuration
+                            });
+                        } catch (tokenError) {
+                            // Token doesn't exist, skip this listing
+                            console.warn(`Skipping listing ${i} for non-existent token ${listing.tokenId}`);
+                            continue;
+                        }
                     }
                 } catch (error) {
                     // Listing might not exist, continue
@@ -958,8 +1073,28 @@ export class ContractInterface {
     async getIPAssetMetadata(tokenId: string) {
         try {
             const ipAsset = await this.getIPAsset();
+            
+            // First check if the token exists by trying to get its owner
+            let owner;
+            try {
+                owner = await ipAsset.ownerOf(tokenId);
+            } catch (ownerError: any) {
+                // If getting owner fails, the token likely doesn't exist
+                if (ownerError.reason === 'ERC721: invalid token ID' || 
+                    ownerError.reason === 'ERC721: owner query for nonexistent token' ||
+                    ownerError.message?.includes('Token does not exist') ||
+                    ownerError.message?.includes('invalid token ID') ||
+                    ownerError.message?.includes('nonexistent token')) {
+                    return {
+                        success: false,
+                        error: 'IPAsset: Token does not exist',
+                        errorType: 'TOKEN_NOT_EXISTS'
+                    };
+                }
+                throw ownerError; // Re-throw if it's a different error
+            }
+            
             const metadata = await ipAsset.getIPMetadata(tokenId);
-            const owner = await ipAsset.ownerOf(tokenId);
             
             return {
                 success: true,
@@ -978,9 +1113,22 @@ export class ContractInterface {
             };
         } catch (error: any) {
             console.error('Error getting IP asset metadata:', error);
+            
+            // Classify the error type for better handling
+            let errorType = 'UNKNOWN_ERROR';
+            if (error.reason === 'IPAsset: Token does not exist' || 
+                error.message?.includes('Token does not exist') ||
+                error.message?.includes('invalid token ID') ||
+                error.message?.includes('nonexistent token')) {
+                errorType = 'TOKEN_NOT_EXISTS';
+            } else if (error.code === -32603 || error.message?.includes('Internal JSON-RPC error')) {
+                errorType = 'RPC_ERROR';
+            }
+            
             return {
                 success: false,
-                error: error.message
+                error: error.message || error.reason || 'Unknown error occurred',
+                errorType
             };
         }
     }

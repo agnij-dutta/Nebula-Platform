@@ -1,0 +1,15 @@
+{
+  "timestamp": "2025-06-13T11:42:33.902Z",
+  "network": "fuji",
+  "chainId": 43113,
+  "deployer": "0xe87758C6CCcf3806C9f1f0C8F99f6Dcae36E5449",
+  "contracts": {
+    "IPMarketplace": {
+      "address": "0xc7fb3eC2cDB989296eD032dC50833dfEb7E026e7",
+      "configuredIPToken": "0x9da6BBe47BCD86E661Bbc542173C0b6B87A5A953",
+      "platformWallet": "0xe87758C6CCcf3806C9f1f0C8F99f6Dcae36E5449"
+    }
+  },
+  "oldMarketplace": "0x554157ab69F167A2946FFd74d5263c216A723dc1",
+  "transactionHash": "0x2dbe431c60d82431c8386a3469acbb4c70b352cd33764938cf57559382208c10"
+}

@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { ethers } from 'ethers';
 import { useWeb3Context } from '../web3/providers/Web3Provider';
 import OwnedTokens from './OwnedTokens';
 import './CreateListing.css';
@@ -58,23 +59,67 @@ const CreateListing: React.FC<CreateListingProps> = ({ onListingCreated, initial
         setIsLoading(true);
         setError('');
         try {
-            // First, check if the token exists and get its owner
-            const ipToken = await contractInterface.getIPToken();
-            try {
-                const owner = await ipToken.ownerOf(parseInt(tokenId));
+            // Debug marketplace configuration to identify contract mismatch
+            const debugInfo = await contractInterface.debugMarketplaceConfiguration();
+            console.log('Contract configuration analysis:', debugInfo);
+            
+            if (debugInfo.isConfigurationMismatch) {
+                setError(`Contract Configuration Error: The marketplace is configured to use contract ${debugInfo.marketplaceIPToken} but the frontend is using ${debugInfo.frontendIPAsset}. Please contact the administrators to update the marketplace configuration.`);
+                return;
+            }
 
-                // Check if the current user owns the token
+            // Get the contract that the marketplace actually uses for validation
+            const marketplaceIPTokenAddress = debugInfo.marketplaceIPToken;
+            const provider = contractInterface.getProvider();
+            
+            // Create a contract instance for the same contract the marketplace uses
+            const marketplaceIPTokenContract = new ethers.Contract(
+                marketplaceIPTokenAddress,
+                ['function ownerOf(uint256 tokenId) view returns (address)'],
+                provider
+            );
+
+            try {
+                const owner = await marketplaceIPTokenContract.ownerOf(parseInt(tokenId));
+                console.log('Token ownership check (marketplace contract):', {
+                    tokenId: parseInt(tokenId),
+                    contractAddress: marketplaceIPTokenAddress,
+                    contractOwner: owner,
+                    currentAccount: account,
+                    isOwner: owner.toLowerCase() === account.toLowerCase()
+                });
+
+                // Check if the current user owns the token according to the marketplace contract
                 if (owner.toLowerCase() !== account.toLowerCase()) {
-                    setError('You do not own this token');
+                    setError(`You do not own this token according to the marketplace contract (${marketplaceIPTokenAddress}). Current owner: ${owner}`);
                     return;
                 }
 
-                // Check if the marketplace is approved
-                const isApproved = await ipToken.isApprovedForAll(owner, contractInterface.getIPMarketplaceAddress());
+                // Additional check: verify the marketplace contract can see this token
+                const ipAsset = await contractInterface.getIPAsset();
+                const frontendOwner = await ipAsset.ownerOf(parseInt(tokenId));
+                
+                if (frontendOwner.toLowerCase() !== owner.toLowerCase()) {
+                    setError(`Token ownership inconsistency detected. Frontend contract owner: ${frontendOwner}, Marketplace contract owner: ${owner}. This suggests a contract configuration issue.`);
+                    return;
+                }
+
+                // Check if the marketplace is approved using the correct contract
+                const marketplaceIPTokenContractWithSigner = new ethers.Contract(
+                    marketplaceIPTokenAddress,
+                    [
+                        'function ownerOf(uint256 tokenId) view returns (address)',
+                        'function isApprovedForAll(address owner, address operator) view returns (bool)',
+                        'function setApprovalForAll(address operator, bool approved)'
+                    ],
+                    contractInterface.getSigner()
+                );
+                
+                const isApproved = await marketplaceIPTokenContractWithSigner.isApprovedForAll(owner, contractInterface.getIPMarketplaceAddress());
 
                 if (!isApproved) {
-                    // Request approval first
-                    const approveTx = await ipToken.setApprovalForAll(contractInterface.getIPMarketplaceAddress(), true);
+                    // Request approval first using the correct contract
+                    const approveTx = await marketplaceIPTokenContractWithSigner.setApprovalForAll(contractInterface.getIPMarketplaceAddress(), true);
                     await approveTx.wait(1); // Wait for 1 confirmation
                 }
 
@@ -102,11 +147,19 @@ const CreateListing: React.FC<CreateListingProps> = ({ onListingCreated, initial
                     tokenId: parseInt(tokenId),
                     price: formattedPrice,
                     isLicense,
-                    durationInSeconds
+                    durationInSeconds,
+                    marketplaceAddress: contractInterface.getIPMarketplaceAddress(),
+                    isApproved
                 });
 
+                // Additional debugging: Check if token ID is correct type
+                const tokenIdNumber = parseInt(tokenId);
+                if (isNaN(tokenIdNumber) || tokenIdNumber <= 0) {
+                    throw new Error('Invalid token ID');
+                }
+
                 const result = await contractInterface.createListing(
-                    parseInt(tokenId),
+                    tokenIdNumber,
                     formattedPrice, // Pass the formatted price as a string
                     isLicense,
                     durationInSeconds
@@ -138,10 +191,20 @@ const CreateListing: React.FC<CreateListingProps> = ({ onListingCreated, initial
                 errorMessage = 'Insufficient AVAX for gas fees';
             } else if (err.code === 'USER_REJECTED') {
                 errorMessage = 'Transaction rejected by user';
+            } else if (err.code === 'UNPREDICTABLE_GAS_LIMIT') {
+                // Handle the specific "Not token owner" error
+                if (err.reason?.includes('Not token owner') || err.error?.data?.message?.includes('Not token owner')) {
+                    errorMessage = 'You are not the owner of this token. Please verify token ownership and try again.';
+                } else {
+                    errorMessage = `Transaction would fail: ${err.reason || err.error?.data?.message || 'Unknown error'}`;
+                }
+            } else if (err.message?.includes('Not token owner')) {
+                errorMessage = 'You are not the owner of this token. Please verify token ownership and try again.';
             } else if (err.message) {
                 errorMessage = err.message;
             }
 
+            console.error('Full error details:', err);
             setError(errorMessage);
         } finally {
             setIsLoading(false);

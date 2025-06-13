@@ -42,7 +42,7 @@ export const WEB3_CONFIG = {
     },
     CONTRACTS: {
         IPMarketplace: {
-            address: '0x554157ab69F167A2946FFd74d5263c216A723dc1',
+            address: '0xc7fb3eC2cDB989296eD032dC50833dfEb7E026e7',
         },
         IPToken: {
             address: '0x334B4e1C27059A3A50E6abEebf428536411fE11e',

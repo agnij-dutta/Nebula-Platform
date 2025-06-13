@@ -40,7 +40,17 @@ const ListingsContainer: React.FC = () => {
                         const assetResult = await contractInterface.getIPAssetMetadata(listing.tokenId);
                         
                         if (!assetResult.success) {
-                            throw new Error('Failed to load IP asset metadata');
+                            // Check if the error is specifically about token not existing
+                            if (assetResult.errorType === 'TOKEN_NOT_EXISTS') {
+                                console.warn(`Skipping listing for non-existent token ${listing.tokenId}`);
+                                return null; // Filter out non-existent tokens instead of crashing
+                            }
+                            // For RPC errors, also return null to avoid cascading failures
+                            if (assetResult.errorType === 'RPC_ERROR') {
+                                console.warn(`RPC error loading token ${listing.tokenId}, skipping:`, assetResult.error);
+                                return null;
+                            }
+                            throw new Error(`Failed to load IP asset metadata: ${assetResult.error}`);
                         }
                         
                         const details = {
