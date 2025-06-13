@@ -88,7 +88,7 @@ const CreateIP: React.FC<CreateIPProps> = ({ onTokenCreated }) => {
       }
 
       // Create IP token with on-chain data and optional IPFS URI
-      const tokenId = await contractInterface.createIP(
+      const result = await contractInterface.createIP(
         title,
         description,
         ipfsUri, // Will be empty string if IPFS upload failed or wasn't needed
@@ -105,8 +105,8 @@ const CreateIP: React.FC<CreateIPProps> = ({ onTokenCreated }) => {
       setTags("")
       setVersion("")
 
-      // Notify parent
-      onTokenCreated(tokenId)
+      // Notify parent with just the tokenId string
+      onTokenCreated(result.tokenId)
     } catch (err: any) {
       let errorMessage = "Could not create IP token"
 

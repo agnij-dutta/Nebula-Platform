@@ -36,9 +36,20 @@ const ListingsContainer: React.FC = () => {
             const processedListings = await Promise.all(
                 activeListings.map(async (listing: any) => {
                     try {
-                        // Get the IP token details
-                        const ipToken = await contractInterface.getIPToken();
-                        const details = await ipToken.ipDetails(listing.tokenId);
+                        // Get the IP token details using the new contract interface
+                        const assetResult = await contractInterface.getIPAssetMetadata(listing.tokenId);
+                        
+                        if (!assetResult.success) {
+                            throw new Error('Failed to load IP asset metadata');
+                        }
+                        
+                        const details = {
+                            title: assetResult.asset!.metadata.title,
+                            description: assetResult.asset!.metadata.description,
+                            creator: assetResult.asset!.owner,
+                            uri: assetResult.asset!.metadata.contentURI,
+                            licenseTerms: 'Standard License' // Default value since license terms are managed separately
+                        };
 
                         // Handle price formatting safely
                         let formattedPrice;

@@ -81,15 +81,14 @@ const LicenseManagement: React.FC = () => {
 
         const asset: IPAsset = {
           tokenId: id,
-          owner: assetResult.owner,
+          owner: assetResult.asset!.owner,
           metadata: {
-            title: assetResult.metadata.name,
-            description: assetResult.metadata.description,
-            contentURI: assetResult.metadata.contentURI || '',
-            tags: assetResult.metadata.tags || [],
-            category: assetResult.metadata.category || 'Other',
-            createdAt: Date.now() / 1000, // Use current time as fallback
-            images: assetResult.metadata.additionalData?.images || []
+            title: assetResult.asset!.metadata.title,
+            description: assetResult.asset!.metadata.description,
+            contentURI: assetResult.asset!.metadata.contentURI || '',
+            tags: assetResult.asset!.metadata.tags || [],
+            category: assetResult.asset!.metadata.category || 'Other',
+            createdAt: assetResult.asset!.metadata.createdAt || Date.now() / 1000
           }
         };
 

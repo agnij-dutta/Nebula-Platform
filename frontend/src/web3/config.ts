@@ -73,22 +73,23 @@ export const WEB3_CONFIG = {
         },
         // New modular contracts
         Registry: {
-            address: '0xcC9Ddd2f94aA0C619Cb2c6F8b7e5ED1F5aB5604D',
+            address: '0x4849022AA9d1133A1e3dB481DBB43791661eEb3c',
         },
         IPAsset: {
-            address: '0x1762ac35d8d1ff8Bc5CA544DD6656cbF8f8f0F6E',
+            address: '0x9da6BBe47BCD86E661Bbc542173C0b6B87A5A953',
         },
         LicenseModule: {
-            address: '0x87819a4e75776daAc7D72626453D89F0bCD8F1f9',
+            address: '0x5b9C2fF6e5477a6C09526e68AaBC9bCb37E0a3f8',
         },
         RoyaltyModule: {
-            address: '0xD3fF01EFFb7BFb763Fe24E697a23109b00b194f0',
+            address: '0x68121DFB807F2FdF72Fe80705552B2ea5676AFEe',
         }
     },
     GAS_LIMIT_MULTIPLIER: 1.2,
     ETHERS_CONFIG: {
         blockConfirmations: 2,
         timeout: 30000,
+        maxBlockRange: 2000, // Maximum block range for event queries (RPC limit is 2048)
         rpcConfig: {
             allowRetry: true,
             maxRetries: 3,

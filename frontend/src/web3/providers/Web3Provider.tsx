@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
 import { useAccount, useConnect, useDisconnect, useSwitchNetwork, useNetwork } from 'wagmi';
 import { InjectedConnector } from 'wagmi/connectors/injected';
 import { WEB3_CONFIG } from '../config';
@@ -64,7 +64,6 @@ export const Web3Provider: React.FC<Web3ProviderProps> = ({ children }) => {
         const provider = new ethers.providers.Web3Provider(window.ethereum);
         const contractInterface = new ContractInterface(provider);
         setContractInterface(contractInterface);
-        console.log("Contract interface initialized");
       } catch (error) {
         console.error("Failed to initialize contract interface:", error);
         setContractInterface(null);
@@ -88,7 +87,7 @@ export const Web3Provider: React.FC<Web3ProviderProps> = ({ children }) => {
     }
   }, [isConnected, address]);
 
-  const connectWallet = async () => {
+  const connectWallet = useCallback(async () => {
     if (connectionAttempts >= MAX_CONNECTION_ATTEMPTS) {
       const errorMsg = 'Maximum connection attempts reached. Please refresh the page and try again.';
       setError(errorMsg);
@@ -109,7 +108,6 @@ export const Web3Provider: React.FC<Web3ProviderProps> = ({ children }) => {
         return;
       }
 
-      console.log("Connecting to MetaMask...");
       
       // Try to connect with MetaMask
       const connector = new InjectedConnector();
@@ -143,7 +141,7 @@ export const Web3Provider: React.FC<Web3ProviderProps> = ({ children }) => {
     } finally {
       setIsConnecting(false);
     }
-  };
+  }, [connectionAttempts, connect]);
 
   const disconnectWallet = () => {
     // Disconnect from wagmi/MetaMask
@@ -166,7 +164,6 @@ export const Web3Provider: React.FC<Web3ProviderProps> = ({ children }) => {
           toast.success('Network switched to Avalanche Fuji');
           return;
         } catch (error) {
-          console.log("Wagmi switchNetwork failed, trying direct method:", error);
         }
       }
 
@@ -202,7 +199,6 @@ export const Web3Provider: React.FC<Web3ProviderProps> = ({ children }) => {
         }
       }
     } catch (error: any) {
-      console.error("Network switch failed:", error);
       const errorMsg = error?.message || 'Failed to switch network';
       setError(errorMsg);
       toast.error(errorMsg);
@@ -232,13 +228,12 @@ export const Web3Provider: React.FC<Web3ProviderProps> = ({ children }) => {
     if (wasConnected && !isConnected && window.ethereum && connectionAttempts === 0) {
       connectWallet();
     }
-  }, []);
+  }, [connectWallet, connectionAttempts, isConnected]);
 
   // Handle ethereum errors
   useEffect(() => {
     if (window.ethereum) {
       const handleError = (error: any) => {
-        console.error("Ethereum error:", error);
         
         if (error.error && error.error.message) {
           const errorMessage = error.error.message.toLowerCase();

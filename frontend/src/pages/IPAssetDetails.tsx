@@ -64,15 +64,14 @@ const IPAssetDetails: React.FC = () => {
 
         const asset: IPAsset = {
           tokenId: id,
-          owner: result.owner,
+          owner: result.asset!.owner,
           metadata: {
-            title: result.metadata.name,
-            description: result.metadata.description,
-            contentURI: result.metadata.contentURI || '',
-            tags: result.metadata.tags || [],
-            category: result.metadata.category || 'Other',
-            createdAt: Date.now() / 1000, // Use current time as fallback
-            images: result.metadata.additionalData?.images || []
+            title: result.asset!.metadata.title,
+            description: result.asset!.metadata.description,
+            contentURI: result.asset!.metadata.contentURI || '',
+            tags: result.asset!.metadata.tags || [],
+            category: result.asset!.metadata.category || 'Other',
+            createdAt: result.asset!.metadata.createdAt || Date.now() / 1000
           }
         };
 

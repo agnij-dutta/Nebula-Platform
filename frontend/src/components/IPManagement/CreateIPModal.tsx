@@ -126,8 +126,10 @@ const CreateIPModal: React.FC<CreateIPModalProps> = ({
       if (parentTokenId) {
         // Create derivative IP
         await contractInterface.createDerivativeIP(
-          parentTokenId, // The contract expects a string
-          metadata
+          parentTokenId,
+          title,
+          description,
+          contentURI || ''
         );
       } else {
         // Create new IP

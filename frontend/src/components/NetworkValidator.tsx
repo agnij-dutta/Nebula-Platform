@@ -95,9 +95,9 @@ const NetworkValidator = () => {
             }
 
             if (connected) {
-                setRpcStatus('connected');
-                setNetworkError('');
-                setValidationAttempts(0);
+                    setRpcStatus('connected');
+                    setNetworkError('');
+                    setValidationAttempts(0);
             } else {
                 throw new Error('All RPC endpoints failed');
             }

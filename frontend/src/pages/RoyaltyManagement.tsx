@@ -115,15 +115,15 @@ const RoyaltyManagement: React.FC = () => {
 
         const asset: IPAsset = {
           tokenId: id,
-          owner: assetResult.owner,
+          owner: assetResult.asset!.owner,
           metadata: {
-            title: assetResult.metadata.name,
-            description: assetResult.metadata.description,
-            contentURI: assetResult.metadata.contentURI || '',
-            tags: assetResult.metadata.tags || [],
-            category: assetResult.metadata.category || 'Other',
-            createdAt: Date.now() / 1000, // Use current time as fallback
-            images: assetResult.metadata.additionalData?.images || []
+            title: assetResult.asset!.metadata.title,
+            description: assetResult.asset!.metadata.description,
+            contentURI: assetResult.asset!.metadata.contentURI || '',
+            tags: assetResult.asset!.metadata.tags || [],
+            category: assetResult.asset!.metadata.category || 'Other',
+            createdAt: assetResult.asset!.metadata.createdAt || Date.now() / 1000,
+            images: [] // images not supported in the current metadata structure
           }
         };
 
@@ -134,14 +134,10 @@ const RoyaltyManagement: React.FC = () => {
         const royaltyResult = await contractInterface.getRoyaltyInfo(id, salePrice.toString());
 
         if (royaltyResult.success) {
-          // Calculate percentage based on the royalty amount for 1 ETH
-          const percentage = ethers.BigNumber.from(royaltyResult.royaltyAmount)
-            .mul(10000)
-            .div(salePrice);
-
+          // Use the percentage directly from the contract result
           const royaltyInfo: RoyaltyInfo = {
-            recipient: royaltyResult.receiver,
-            percentage: percentage,
+            recipient: royaltyResult.royaltyInfo!.recipient,
+            percentage: ethers.BigNumber.from(royaltyResult.royaltyInfo!.percentage),
             maxAmount: ethers.BigNumber.from(0), // Not supported in ERC2981
             paidAmount: ethers.BigNumber.from(0) // Not tracked in the current implementation
           };
@@ -292,14 +288,10 @@ const RoyaltyManagement: React.FC = () => {
                 const royaltyResult = await contractInterface.getRoyaltyInfo(id, salePrice.toString());
 
                 if (royaltyResult.success) {
-                  // Calculate percentage based on the royalty amount for 1 ETH
-                  const percentage = ethers.BigNumber.from(royaltyResult.royaltyAmount)
-                    .mul(10000)
-                    .div(salePrice);
-
+                  // Use the percentage directly from the contract result
                   const royaltyInfo: RoyaltyInfo = {
-                    recipient: royaltyResult.receiver,
-                    percentage: percentage,
+                    recipient: royaltyResult.royaltyInfo!.recipient,
+                    percentage: ethers.BigNumber.from(royaltyResult.royaltyInfo!.percentage),
                     maxAmount: ethers.BigNumber.from(0), // Not supported in ERC2981
                     paidAmount: ethers.BigNumber.from(0) // Not tracked in the current implementation
                   };
