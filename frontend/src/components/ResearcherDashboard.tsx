@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { ethers } from 'ethers';
-import { useWeb3 } from '../web3/hooks/useWeb3';
+import { useWeb3Context } from '../web3/providers/Web3Provider';
 import { ProjectDetails } from '../web3/utils/contracts';
 import { IPTokenData } from '../types/ipTokens';
 import CreateListing from './CreateListing';
@@ -15,7 +15,7 @@ enum DashboardTab {
 }
 
 const ResearcherDashboard: React.FC = () => {
-    const { contractInterface, account, needsWallet, connectWallet } = useWeb3();
+    const { contractInterface, account, needsWallet, connectWallet } = useWeb3Context();
     const [activeTab, setActiveTab] = useState<DashboardTab>(DashboardTab.Projects);
     const [projects, setProjects] = useState<ProjectDetails[]>([]);
     const [ownedTokens, setOwnedTokens] = useState<IPTokenData[]>([]);

@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { ethers } from 'ethers';
-import { useWeb3 } from '../web3/hooks/useWeb3';
+import { useWeb3Context } from '../web3/providers/Web3Provider';
 import WalletPrompt from './WalletPrompt';
 import './Staking.css';
 
@@ -12,7 +12,7 @@ interface StakeInfo {
 }
 
 const Staking: React.FC = () => {
-  const { contractInterface, account, needsWallet, connectWallet } = useWeb3();
+      const { contractInterface, account, needsWallet, connectWallet } = useWeb3Context();
   const [stakeInfo, setStakeInfo] = useState<StakeInfo | null>(null);
   const [neblBalance, setNeblBalance] = useState('0');
   const [amount, setAmount] = useState('');
@@ -25,32 +25,30 @@ const Staking: React.FC = () => {
     if (!contractInterface || !account) return;
     
     try {
-      // Initialize contract first
-      const neblToken = await contractInterface.getNEBLToken();
-      const info = await neblToken.getStakeInfo(account);
-      
-      // Format the info properly
-      setStakeInfo({
-        amount: ethers.utils.formatEther(info.amount),
-        timestamp: info.timestamp.toNumber(),
-        lockPeriod: info.lockPeriod.toNumber(),
-        currentReward: ethers.utils.formatEther(info.currentReward)
-      });
-    } catch (err) {
+      setError('');
+      const info = await contractInterface.getStakeInfo(account);
+      setStakeInfo(info);
+    } catch (err: any) {
       console.error('Failed to load stake info:', err);
-      // Don't set error here as it's not a user action
+      // Set stake info to null if there's no active stake
+      setStakeInfo(null);
     }
   }, [contractInterface, account]);
 
   const loadNeblBalance = useCallback(async () => {
-    if (!contractInterface || !account) return;
+    if (!contractInterface || !account) {
+      setLoading(false);
+      return;
+    }
     
     try {
-      const neblToken = await contractInterface.getNEBLToken();
-      const balance = await neblToken.balanceOf(account);
+      setError('');
+      const balance = await contractInterface.getNeblBalance(account);
       setNeblBalance(ethers.utils.formatEther(balance));
-    } catch (err) {
+    } catch (err: any) {
       console.error('Failed to load NEBL balance:', err);
+      setError('Failed to load NEBL balance. Please check your connection.');
+      setNeblBalance('0');
     } finally {
       setLoading(false);
     }
@@ -58,8 +56,9 @@ const Staking: React.FC = () => {
 
   useEffect(() => {
     if (contractInterface && account) {
-      loadStakeInfo();
-      loadNeblBalance();
+      Promise.all([loadStakeInfo(), loadNeblBalance()]);
+    } else {
+      setLoading(false);
     }
   }, [contractInterface, account, loadStakeInfo, loadNeblBalance]);
 
@@ -67,23 +66,41 @@ const Staking: React.FC = () => {
     e.preventDefault();
     if (!contractInterface || !account) return;
 
+    if (!amount || parseFloat(amount) <= 0) {
+      setError('Please enter a valid amount');
+      return;
+    }
+
+    if (parseFloat(amount) > parseFloat(neblBalance)) {
+      setError('Insufficient NEBL balance');
+      return;
+    }
+
     setTxPending(true);
     setError('');
     
     try {
       // Convert days to seconds for the contract
       const lockPeriodSeconds = parseInt(lockPeriod) * 24 * 60 * 60;
-      await contractInterface.stakeNEBL(amount, lockPeriodSeconds);
+      const tx = await contractInterface.stakeNEBL(amount, lockPeriodSeconds);
+      
+      // Wait for transaction to be mined
+      await tx;
       
       // Reload data
-      await loadStakeInfo();
-      await loadNeblBalance();
+      await Promise.all([loadStakeInfo(), loadNeblBalance()]);
       
       // Reset form
       setAmount('');
     } catch (err: any) {
       console.error('Staking failed:', err);
-      setError(err.message || 'Failed to stake NEBL');
+      if (err.message?.includes('insufficient funds')) {
+        setError('Insufficient funds for transaction');
+      } else if (err.code === 4001) {
+        setError('Transaction was rejected by user');
+      } else {
+        setError(err.message || 'Failed to stake NEBL');
+      }
     } finally {
       setTxPending(false);
     }
@@ -113,15 +130,17 @@ const Staking: React.FC = () => {
     setError('');
     
     try {
-      await contractInterface.unstakeNEBL();
-      await loadStakeInfo();
-      await loadNeblBalance();
+      const tx = await contractInterface.unstakeNEBL();
+      await tx;
+      await Promise.all([loadStakeInfo(), loadNeblBalance()]);
     } catch (err: any) {
       console.error('Unstaking failed:', err);
       // Make the error message more user-friendly
       if (err.message?.includes('Stake still locked')) {
         const unlockDate = getUnlockDate();
         setError(`Your stake is still locked until ${unlockDate?.toLocaleString()}. Please wait until the lock period expires.`);
+      } else if (err.code === 4001) {
+        setError('Transaction was rejected by user');
       } else {
         setError(err.message || 'Failed to unstake NEBL');
       }
@@ -153,7 +172,7 @@ const Staking: React.FC = () => {
       <div className="staking-header">
         <h1>Stake NEBL</h1>
         <div className="nebl-balance">
-          Available: {neblBalance} NEBL
+          Available: {parseFloat(neblBalance).toFixed(6)} NEBL
         </div>
       </div>
 
@@ -166,7 +185,7 @@ const Staking: React.FC = () => {
             <div className="stake-info">
               <div className="info-row">
                 <span>Staked Amount:</span>
-                <span>{stakeInfo.amount} NEBL</span>
+                <span>{parseFloat(stakeInfo.amount).toFixed(6)} NEBL</span>
               </div>
               <div className="info-row">
                 <span>Lock Period:</span>
@@ -174,7 +193,7 @@ const Staking: React.FC = () => {
               </div>
               <div className="info-row">
                 <span>Current Reward:</span>
-                <span>{stakeInfo.currentReward} NEBL</span>
+                <span>{parseFloat(stakeInfo.currentReward).toFixed(6)} NEBL</span>
               </div>
               <div className="info-row">
                 <span>Stake Date:</span>
@@ -202,40 +221,59 @@ const Staking: React.FC = () => {
           )}
         </div>
 
-        <div className="stake-form">
-          <h2>New Stake</h2>
-          <form onSubmit={handleStake}>
-            <div className="form-group">
-              <label>Amount (NEBL)</label>
-              <input
-                type="number"
-                step="0.000001"
-                min="0"
-                value={amount}
-                onChange={e => setAmount(e.target.value)}
-                placeholder="Enter amount to stake"
-                required
-              />
-            </div>
-            <div className="form-group">
-              <label>Lock Period (Days)</label>
-              <select
-                value={lockPeriod}
-                onChange={e => setLockPeriod(e.target.value)}
-                required
-              >
-                <option value="7">7 days - {calculateAPR(7)}% APR</option>
-                <option value="30">30 days - {calculateAPR(30)}% APR</option>
-                <option value="90">90 days - {calculateAPR(90)}% APR</option>
-                <option value="180">180 days - {calculateAPR(180)}% APR</option>
-                <option value="365">365 days - {calculateAPR(365)}% APR</option>
-              </select>
-            </div>
-            <button type="submit" disabled={txPending}>
-              {txPending ? 'Processing...' : 'Stake NEBL'}
+        {parseFloat(neblBalance) <= 0 ? (
+          <div className="no-nebl-tokens">
+            <h2>Get NEBL Tokens</h2>
+            <p>You need NEBL tokens to stake. You can get NEBL tokens by:</p>
+            <ul>
+              <li>Visit the <strong>Swap</strong> page to exchange AVAX for NEBL</li>
+              <li>Participate in research projects to earn NEBL rewards</li>
+              <li>Purchase IP tokens that earn NEBL royalties</li>
+            </ul>
+            <button 
+              onClick={() => window.location.href = '/swap'}
+              className="get-nebl-button"
+            >
+              Go to Swap →
             </button>
-          </form>
-        </div>
+          </div>
+        ) : (
+          <div className="stake-form">
+            <h2>New Stake</h2>
+            <form onSubmit={handleStake}>
+              <div className="form-group">
+                <label>Amount (NEBL)</label>
+                <input
+                  type="number"
+                  step="0.000001"
+                  min="0"
+                  value={amount}
+                  onChange={e => setAmount(e.target.value)}
+                  placeholder="Enter amount to stake"
+                  required
+                />
+                <small>Balance: {parseFloat(neblBalance).toFixed(6)} NEBL</small>
+              </div>
+              <div className="form-group">
+                <label>Lock Period (Days)</label>
+                <select
+                  value={lockPeriod}
+                  onChange={e => setLockPeriod(e.target.value)}
+                  required
+                >
+                  <option value="7">7 days - {calculateAPR(7).toFixed(1)}% APR</option>
+                  <option value="30">30 days - {calculateAPR(30).toFixed(1)}% APR</option>
+                  <option value="90">90 days - {calculateAPR(90).toFixed(1)}% APR</option>
+                  <option value="180">180 days - {calculateAPR(180).toFixed(1)}% APR</option>
+                  <option value="365">365 days - {calculateAPR(365).toFixed(1)}% APR</option>
+                </select>
+              </div>
+              <button type="submit" disabled={txPending || parseFloat(neblBalance) <= 0}>
+                {txPending ? 'Processing...' : 'Stake NEBL'}
+              </button>
+            </form>
+          </div>
+        )}
 
         <div className="staking-info">
           <h2>Staking Benefits</h2>

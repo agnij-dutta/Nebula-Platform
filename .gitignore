@@ -8,6 +8,7 @@ elements/
 build/
 dist/
 coverage/
+# Nebula-landing/
 
 # Hardhat files
 web3/cache/

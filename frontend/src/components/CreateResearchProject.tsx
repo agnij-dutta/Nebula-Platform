@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useWeb3 } from '../web3/hooks/useWeb3';
+import { useWeb3Context } from '../web3/providers/Web3Provider';
 import WalletPrompt from './WalletPrompt';
 import './CreateResearchProject.css';
 
@@ -12,7 +12,7 @@ interface Milestone {
 
 const CreateResearchProject: React.FC = () => {
     const navigate = useNavigate();
-    const { contractInterface, account, needsWallet, connectWallet } = useWeb3();
+    const { contractInterface, account, needsWallet, connectWallet } = useWeb3Context();
     const [title, setTitle] = useState('');
     const [description, setDescription] = useState('');
     const [category, setCategory] = useState('');

@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
-import { useWeb3 } from '../web3/hooks/useWeb3';
+import { useWeb3Context } from '../web3/providers/Web3Provider';
 import { ProjectDetails } from '../web3/utils/contracts';
 import WalletPrompt from './WalletPrompt';
 import './ResearchHub.css';
@@ -18,7 +18,7 @@ enum FundingStatus {
 }
 
 const ResearchHub: React.FC = () => {
-  const { contractInterface, account, needsWallet, connectWallet, isConnecting } = useWeb3();
+  const { contractInterface, account, needsWallet, connectWallet, isConnecting } = useWeb3Context();
   const [projects, setProjects] = useState<ProjectDetails[]>([]);
   const [sortBy, setSortBy] = useState<SortOption>(SortOption.Trending);
   const [filterStatus, setFilterStatus] = useState<FundingStatus>(FundingStatus.All);
@@ -33,21 +33,39 @@ const ResearchHub: React.FC = () => {
       const maxPossibleProjects = 100; // Set a reasonable upper limit
       let allProjects = [];
       let seenTitles = new Set();
+      let consecutiveFailures = 0;
       
       for (let projectId = 1; projectId <= maxPossibleProjects; projectId++) {
         try {
+          console.log(`Attempting to get project details for ID: ${projectId}`);
           const project = await contractInterface.getProjectDetails(projectId.toString());
+          console.log(`Successfully loaded project details for ID ${projectId}:`, project);
+          
           if (project) {
             if (!seenTitles.has(project.title.toLowerCase())) {
               seenTitles.add(project.title.toLowerCase());
               allProjects.push(project);
+              consecutiveFailures = 0; // Reset failure counter on success
             }
           }
         } catch (err: any) {
-          if (err?.message?.includes('Project not found')) {
+          consecutiveFailures++;
+          console.error(`Error loading project ${projectId}:`, err);
+          
+          if (err?.message?.includes('Project not found') || err?.message?.includes('execution reverted')) {
+            // If we get multiple consecutive failures, assume we've reached the end
+            if (consecutiveFailures >= 3) {
+              console.log(`Stopping project loading after ${consecutiveFailures} consecutive failures`);
+              break;
+            }
+            continue;
+          }
+          
+          // For other errors (RPC issues), continue trying but limit attempts
+          if (consecutiveFailures >= 5) {
+            console.log(`Too many consecutive RPC failures, stopping at project ${projectId}`);
             break;
           }
-          console.error(`Error loading project ${projectId}:`, err);
           continue;
         }
       }
@@ -154,7 +172,7 @@ const ResearchHub: React.FC = () => {
             </select>
           </div>
           
-          <Link to="/create-research" className="create-project-button">
+          <Link to="/create-project" className="create-project-button">
             Create Project
           </Link>
         </div>

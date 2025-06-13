@@ -1,10 +1,10 @@
 import React, { useCallback } from 'react';
-import { useWeb3 } from '../web3/hooks/useWeb3';
+import { useWeb3Context } from '../web3/providers/Web3Provider';
 import './NetworkSwitchOverlay.css';
 import { WEB3_CONFIG } from '../web3/config';
 
 export const NetworkSwitchOverlay: React.FC = () => {
-    const { chainId, error, isNetworkSwitching, switchToFujiTestnet } = useWeb3();
+    const { chainId, error, isNetworkSwitching, switchToFujiTestnet } = useWeb3Context();
 
     const handleNetworkSwitch = useCallback(async () => {
         try {
@@ -23,13 +23,13 @@ export const NetworkSwitchOverlay: React.FC = () => {
             <div className="network-switch-content">
                 <div className="network-header">
                     <h2>Wrong Network</h2>
-                    <p>It seems that you are connecting to an unsupported network. Please change network on your wallet to Avalanche Fuji Testnet</p>
+                    <p>It seems that you are connecting to an unsupported network. Please select a network below:</p>
                 </div>
-                
+
                 <div className="network-loading-indicator">
                     <div className="circle-loader"></div>
                 </div>
-                
+
                 <div className="network-info">
                     <div className="network-comparison">
                         <div className="current-network">
@@ -39,22 +39,39 @@ export const NetworkSwitchOverlay: React.FC = () => {
                                 <span className="network-name">{chainId ? `Unknown Network (${chainId})` : 'Not Connected'}</span>
                             </div>
                         </div>
-                        
+
                         <div className="divider">
                             <span className="divider-icon">→</span>
                         </div>
-                        
+
                         <div className="required-network">
                             <div className="network-indicator correct-network"></div>
                             <div className="network-details">
                                 <span className="network-label">Required</span>
-                                <span className="network-name">{WEB3_CONFIG.NETWORKS.TESTNET.name}</span>
+                                <span className="network-name">
+                                    {WEB3_CONFIG.NETWORKS.TESTNET.name}
+                                </span>
                             </div>
                         </div>
                     </div>
                 </div>
 
-                <button 
+                <div className="network-selection">
+                    <div className="network-options">
+                        <label className="network-option selected">
+                            <input
+                                type="radio"
+                                name="network"
+                                value="fuji"
+                                checked={true}
+                                readOnly
+                            />
+                            <span>{WEB3_CONFIG.NETWORKS.TESTNET.name}</span>
+                        </label>
+                    </div>
+                </div>
+
+                <button
                     onClick={handleNetworkSwitch}
                     disabled={isNetworkSwitching}
                     className={`switch-button ${isNetworkSwitching ? 'loading' : ''}`}

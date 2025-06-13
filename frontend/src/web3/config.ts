@@ -20,10 +20,9 @@ export const WEB3_CONFIG = {
             chainId: 43113,
             name: 'Avalanche Fuji Testnet',
             rpcUrl: [
-                'https://avalanche-fuji-c-chain.publicnode.com',
-                'https://endpoints.omniatech.io/v1/avax/fuji/public',
                 'https://api.avax-test.network/ext/bc/C/rpc',
-                'https://rpc.ankr.com/avalanche_fuji'
+                'https://avalanche-fuji-c-chain.publicnode.com',
+                'https://avalanche-fuji.blockpi.network/v1/rpc/public'
             ],
             blockExplorerUrl: 'https://testnet.snowtrace.io',
             nativeCurrency: {
@@ -31,7 +30,7 @@ export const WEB3_CONFIG = {
                 symbol: 'AVAX',
                 decimals: 18
             },
-            chainName: 'Avalanche FUJI C-Chain'
+            chainName: 'Avalanche Fuji Testnet'
         }
     },
     CONNECTION_CONFIG: {
@@ -71,6 +70,19 @@ export const WEB3_CONFIG = {
         },
         FundingEscrow: {
             address: '0xE328421898E13c9B5401Ec257A5D812C147d7D24',
+        },
+        // New modular contracts
+        Registry: {
+            address: '0xcC9Ddd2f94aA0C619Cb2c6F8b7e5ED1F5aB5604D',
+        },
+        IPAsset: {
+            address: '0x1762ac35d8d1ff8Bc5CA544DD6656cbF8f8f0F6E',
+        },
+        LicenseModule: {
+            address: '0x87819a4e75776daAc7D72626453D89F0bCD8F1f9',
+        },
+        RoyaltyModule: {
+            address: '0xD3fF01EFFb7BFb763Fe24E697a23109b00b194f0',
         }
     },
     GAS_LIMIT_MULTIPLIER: 1.2,

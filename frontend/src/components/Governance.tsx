@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { ethers } from 'ethers';
-import { useWeb3 } from '../web3/hooks/useWeb3';
+import { useWeb3Context } from '../web3/providers/Web3Provider';
 import WalletPrompt from './WalletPrompt';
 import ErrorDisplay from './ErrorDisplay';
 import './Governance.css';
@@ -29,7 +29,7 @@ interface Proposal {
 }
 
 const Governance: React.FC = () => {
-  const { contractInterface, account, needsWallet, connectWallet } = useWeb3();
+      const { contractInterface, account, needsWallet, connectWallet } = useWeb3Context();
   const [proposals, setProposals] = useState<Proposal[]>([]);
   const [loading, setLoading] = useState(true);
   const [neblBalance, setNeblBalance] = useState('0');

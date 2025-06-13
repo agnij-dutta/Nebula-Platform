@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { ethers } from 'ethers';
-import { useWeb3 } from '../web3/hooks/useWeb3';
+import { useWeb3Context } from '../web3/providers/Web3Provider';
 import { WEB3_CONFIG } from '../web3/config';
 import WalletPrompt from './WalletPrompt';
 import './TokenSwap.css';
@@ -15,7 +15,7 @@ const formatNumber = (num: number): string => {
 };
 
 const TokenSwap = () => {
-    const { contractInterface, account, needsWallet, connectWallet, chainId, isNetworkSwitching } = useWeb3();
+    const { contractInterface, account, needsWallet, connectWallet, chainId, isNetworkSwitching, isWrongNetwork } = useWeb3Context();
     const [avaxAmount, setAvaxAmount] = useState('');
     const [neblAmount, setNeblAmount] = useState('');
     const [expectedNebl, setExpectedNebl] = useState('0');
@@ -161,7 +161,7 @@ const TokenSwap = () => {
         );
     }
 
-    const isWrongNetwork = chainId !== WEB3_CONFIG.NETWORKS.TESTNET.chainId;
+
 
     return (
         <div className={`token-swap ${loading ? 'loading' : ''}`}>

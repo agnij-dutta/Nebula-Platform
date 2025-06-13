@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { ethers, BigNumber } from 'ethers';
-import { useWeb3 } from '../web3/hooks/useWeb3';
+import { useWeb3Context } from '../web3/providers/Web3Provider';
 import { ipfsService } from '../web3/utils/ipfs';
 import { Project, Milestone } from '../types/contracts';
 import MilestoneVerificationStatus from './MilestoneVerificationStatus';
@@ -20,7 +20,7 @@ interface ProjectMetadata {
 const ProjectDetails: React.FC = () => {
     const { id } = useParams<{ id: string }>();
     const navigate = useNavigate();
-    const { contractInterface, account, needsWallet, connectWallet } = useWeb3();
+    const { contractInterface, account, needsWallet, connectWallet } = useWeb3Context();
     const [project, setProject] = useState<Project | null>(null);
     const [metadata, setMetadata] = useState<ProjectMetadata | null>(null);
     const [fundAmount, setFundAmount] = useState('');
@@ -351,7 +351,7 @@ const ProjectDetails: React.FC = () => {
                                 <div
                                     className="progress"
                                     style={{
-                                        width: `${(milestone.currentAmount.mul(100).div(milestone.targetAmount)).toString()}%`
+                                        width: `${milestone.currentAmount.mul(100).div(milestone.targetAmount).toNumber()}%`
                                     }}
                                 />
                             </div>

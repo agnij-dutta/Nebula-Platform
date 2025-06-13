@@ -1,629 +1,547 @@
-:root {
-    --primary: #8b5cf6;
-    --primary-light: #a78bfa;
-    --primary-dark: #7c3aed;
-    --secondary: #6366f1;
-    --secondary-light: #818cf8;
-    --accent: #c4b5fd;
-    --glass-bg: rgba(15, 16, 25, 0.7);
-    --card-bg: rgba(20, 21, 33, 0.8);
-    --input-bg: rgba(30, 31, 45, 0.6);
-    --glass-border: rgba(139, 92, 246, 0.2);
-    --glow-shadow: rgba(139, 92, 246, 0.25);
-    --error: #ef4444;
-    --success: #10b981;
-    --border-radius-sm: 8px;
-    --border-radius-md: 12px;
-    --border-radius-lg: 16px;
-    --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
-  }
-  
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Orbitron:wght@400;500;600;700;800;900&display=swap');
+
+/* Main container */
   .wallet-prompt {
     display: flex;
+  align-items: center;
     justify-content: center;
+  min-height: 100vh;
+  position: relative;
+  overflow: hidden;
+  background: linear-gradient(135deg, #0f0f23 0%, #1a1a2e 50%, #16213e 100%);
+  font-family: 'Space Grotesk', sans-serif;
+}
+
+/* Connected state */
+.connected-state {
+  min-height: auto;
+  padding: 2rem;
+}
+
+.connected-card {
+  max-width: 400px;
+  width: 100%;
+  padding: 2rem;
+  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.02);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+}
+
+.connected-header {
+  display: flex;
     align-items: center;
-    min-height: calc(100vh - 120px);
-    padding: 2rem;
-    perspective: 1200px;
-    z-index: 10;
-    position: relative;
-  }
-  
-  /* Enhanced animated particles background */
-  .nebula-particles {
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.connected-info h3 {
+  margin: 0;
+  color: #ffffff;
+  font-size: 1.2rem;
+  font-weight: 600;
+}
+
+.wallet-address {
+  margin: 0.5rem 0 0 0;
+  color: #a855f7;
+  font-family: 'Orbitron', monospace;
+  font-size: 0.9rem;
+  font-weight: 500;
+}
+
+.disconnect-btn {
+  width: 100%;
+  padding: 0.75rem 1.5rem;
+  background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+  color: white;
+  border: none;
+  border-radius: 12px;
+  font-size: 1rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.disconnect-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(239, 68, 68, 0.4);
+}
+
+/* Animated stars background */
+.stars-bg {
     position: absolute;
     top: 0;
     left: 0;
     width: 100%;
     height: 100%;
     overflow: hidden;
-    z-index: -1;
+  z-index: 0;
   }
   
-  .particle {
+.stars,
+.stars2,
+.stars3 {
     position: absolute;
-    background: radial-gradient(circle, rgba(139, 92, 246, 0.8) 0%, rgba(139, 92, 246, 0) 70%);
-    border-radius: 50%;
-    opacity: 0.4;
-    filter: blur(8px);
-    animation: float-particle 20s infinite ease-in-out;
-  }
-  
-  .particle.p1 {
-    width: 180px;
-    height: 180px;
-    top: 10%;
-    left: 10%;
-    animation-delay: 0s;
-    background: radial-gradient(circle, rgba(139, 92, 246, 0.8) 0%, rgba(139, 92, 246, 0) 70%);
-  }
-  
-  .particle.p2 {
-    width: 120px;
-    height: 120px;
-    top: 60%;
-    left: 30%;
-    animation-delay: -5s;
-    background: radial-gradient(circle, rgba(99, 102, 241, 0.8) 0%, rgba(99, 102, 241, 0) 70%);
-  }
-  
-  .particle.p3 {
-    width: 220px;
-    height: 220px;
-    top: 30%;
-    left: 60%;
-    animation-delay: -10s;
-    background: radial-gradient(circle, rgba(167, 139, 250, 0.8) 0%, rgba(167, 139, 250, 0) 70%);
-  }
-  
-  .particle.p4 {
-    width: 150px;
-    height: 150px;
-    top: 70%;
-    left: 70%;
-    animation-delay: -2s;
-    background: radial-gradient(circle, rgba(139, 92, 246, 0.8) 0%, rgba(139, 92, 246, 0) 70%);
-  }
-  
-  .particle.p5 {
-    width: 200px;
-    height: 200px;
-    top: 40%;
-    left: 20%;
-    animation-delay: -7s;
-    background: radial-gradient(circle, rgba(99, 102, 241, 0.8) 0%, rgba(99, 102, 241, 0) 70%);
-  }
-  
-  .particle.p6 {
-    width: 180px;
-    height: 180px;
-    top: 20%;
-    left: 80%;
-    animation-delay: -3s;
-    background: radial-gradient(circle, rgba(167, 139, 250, 0.8) 0%, rgba(167, 139, 250, 0) 70%);
-  }
-  
-  @keyframes float-particle {
-    0%,
-    100% {
-      transform: translateY(0) translateX(0) scale(1);
-      opacity: 0.4;
-    }
-    25% {
-      transform: translateY(-40px) translateX(30px) scale(1.1);
-      opacity: 0.6;
-    }
-    50% {
-      transform: translateY(30px) translateX(-30px) scale(0.9);
-      opacity: 0.2;
-    }
-    75% {
-      transform: translateY(40px) translateX(35px) scale(1.05);
-      opacity: 0.5;
-    }
-  }
-  
-  .wallet-prompt-content {
-    background: var(--glass-bg);
-    backdrop-filter: blur(20px);
-    -webkit-backdrop-filter: blur(20px);
-    border: 1px solid rgba(139, 92, 246, 0.3);
-    border-radius: var(--border-radius-lg);
-    padding: 3.5rem;
-    text-align: center;
-    max-width: 500px;
-    width: 100%;
-    position: relative;
-    overflow: hidden;
-    transform-style: preserve-3d;
-    transform: translateZ(0) rotateX(2deg);
-    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.3), 0 0 40px rgba(139, 92, 246, 0.2), inset 0 0 20px rgba(139, 92, 246, 0.05);
-    transition: all 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-  }
-  
-  /* Animated border glow */
-  .wallet-prompt-content::before {
-    content: "";
-    position: absolute;
-    top: -2px;
-    left: -2px;
-    right: -2px;
-    bottom: -2px;
-    background: linear-gradient(
-      45deg,
-      rgba(139, 92, 246, 0) 0%,
-      rgba(139, 92, 246, 0.8) 50%,
-      rgba(99, 102, 241, 0.8) 75%,
-      rgba(139, 92, 246, 0) 100%
-    );
-    z-index: -1;
-    border-radius: calc(var(--border-radius-lg) + 2px);
-    animation: border-glow 8s linear infinite;
-  }
-  
-  @keyframes border-glow {
-    0% {
-      background-position: 0% 0%;
-    }
-    100% {
-      background-position: 300% 0%;
-    }
-  }
-  
-  .wallet-prompt-content::after {
-    content: "";
-    position: absolute;
-    inset: 1px;
-    background: var(--glass-bg);
-    border-radius: var(--border-radius-lg);
-    z-index: -1;
-  }
-  
-  .wallet-prompt-content:hover {
-    transform: translateZ(30px) rotateX(0deg);
-    box-shadow: 0 30px 70px rgba(0, 0, 0, 0.4), 0 0 50px rgba(139, 92, 246, 0.3), inset 0 0 25px rgba(139, 92, 246, 0.1);
-  }
-  
-  /* Enhanced Nebula logo */
-  .nebula-logo-container {
-    display: flex;
-    justify-content: center;
-    margin-bottom: 2.5rem;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: transparent;
+}
+
+.stars {
+  background-image: 
+    radial-gradient(2px 2px at 20px 30px, #eee, transparent),
+    radial-gradient(2px 2px at 40px 70px, rgba(255,255,255,0.8), transparent),
+    radial-gradient(1px 1px at 90px 40px, #fff, transparent),
+    radial-gradient(1px 1px at 130px 80px, rgba(255,255,255,0.6), transparent),
+    radial-gradient(2px 2px at 160px 30px, #ddd, transparent);
+  background-repeat: repeat;
+  background-size: 200px 100px;
+  animation: twinkle 5s linear infinite;
+}
+
+.stars2 {
+  background-image: 
+    radial-gradient(1px 1px at 40px 60px, #fff, transparent),
+    radial-gradient(1px 1px at 120px 50px, rgba(255,255,255,0.7), transparent),
+    radial-gradient(1px 1px at 160px 90px, #eee, transparent);
+  background-repeat: repeat;
+  background-size: 300px 150px;
+  animation: twinkle 8s linear infinite;
+}
+
+.stars3 {
+  background-image: 
+    radial-gradient(1px 1px at 90px 20px, #fff, transparent),
+    radial-gradient(2px 2px at 170px 80px, rgba(255,255,255,0.5), transparent);
+  background-repeat: repeat;
+  background-size: 400px 200px;
+  animation: twinkle 12s linear infinite;
+}
+
+@keyframes twinkle {
+  from { transform: translateY(0); }
+  to { transform: translateY(-100vh); }
+}
+
+/* Floating particles */
+.floating-particles {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 1;
+  pointer-events: none;
+}
+
+.particle {
+  position: absolute;
+  width: 4px;
+  height: 4px;
+  background: linear-gradient(45deg, #8B5CF6, #06B6D4);
+  border-radius: 50%;
+  animation: float 6s ease-in-out infinite;
+}
+
+.particle:nth-child(1) {
+  top: 20%;
+  left: 10%;
+  animation-delay: 0s;
+  animation-duration: 8s;
+}
+
+.particle:nth-child(2) {
+  top: 60%;
+  left: 80%;
+  animation-delay: 2s;
+  animation-duration: 6s;
+}
+
+.particle:nth-child(3) {
+  top: 40%;
+  left: 20%;
+  animation-delay: 4s;
+  animation-duration: 10s;
+}
+
+.particle:nth-child(4) {
+  top: 80%;
+  left: 60%;
+  animation-delay: 1s;
+  animation-duration: 7s;
+}
+
+.particle:nth-child(5) {
+  top: 30%;
+  left: 90%;
+  animation-delay: 3s;
+  animation-duration: 9s;
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0px) rotate(0deg); opacity: 0.7; }
+  33% { transform: translateY(-20px) rotate(120deg); opacity: 1; }
+  66% { transform: translateY(10px) rotate(240deg); opacity: 0.8; }
+}
+
+/* Main wallet card */
+.wallet-card {
+  max-width: 480px;
+  width: 100%;
+  margin: 0 auto;
+  padding: 3rem 2.5rem;
+  border-radius: 24px;
+  background: rgba(255, 255, 255, 0.03);
+  backdrop-filter: blur(25px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 
+    0 8px 32px rgba(0, 0, 0, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
     position: relative;
     z-index: 2;
-  }
-  
-  .nebula-logo {
-    width: 90px;
-    height: 90px;
-    border-radius: 50%;
-    background: linear-gradient(135deg, var(--primary), var(--secondary));
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-family: "Space Grotesk", sans-serif;
-    font-size: 2.75rem;
-    font-weight: 700;
-    color: white;
-    position: relative;
-    box-shadow: 0 0 30px rgba(139, 92, 246, 0.6), 0 0 60px rgba(99, 102, 241, 0.4);
-    animation: pulse 3s infinite ease-in-out;
-    text-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
-  }
-  
-  .nebula-logo::before {
-    content: "";
-    position: absolute;
-    top: -15px;
-    left: -15px;
-    right: -15px;
-    bottom: -15px;
-    border-radius: 50%;
-    background: conic-gradient(
-      transparent,
-      rgba(139, 92, 246, 0.5),
-      rgba(99, 102, 241, 0.5),
-      rgba(167, 139, 250, 0.5),
-      transparent
-    );
-    z-index: -1;
-    animation: rotating 10s linear infinite;
-  }
-  
-  .nebula-logo::after {
-    content: "";
-    position: absolute;
-    top: -5px;
-    left: -5px;
-    right: -5px;
-    bottom: -5px;
-    border-radius: 50%;
-    border: 2px solid rgba(255, 255, 255, 0.3);
-    z-index: -1;
-    animation: pulse 3s infinite ease-in-out alternate;
-  }
-  
-  @keyframes rotating {
-    from {
-      transform: rotate(0deg);
-    }
-    to {
-      transform: rotate(360deg);
-    }
-  }
-  
-  .welcome-message {
+  transition: all 0.3s ease;
+}
+
+.wallet-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 
+    0 20px 60px rgba(0, 0, 0, 0.4),
+    inset 0 1px 0 rgba(255, 255, 255, 0.15);
+}
+
+/* Wallet header */
+.wallet-header {
+  text-align: center;
     margin-bottom: 2.5rem;
-    transform-style: preserve-3d;
-  }
-  
-  .welcome-title {
-    font-size: 2.25rem;
+}
+
+.wallet-header h2 {
+  margin: 1rem 0 0.5rem 0;
+  color: #ffffff;
+  font-size: 2rem;
     font-weight: 700;
-    margin-bottom: 0.75rem;
-    background: linear-gradient(45deg, var(--primary), var(--secondary-light));
+  font-family: 'Orbitron', monospace;
+  background: linear-gradient(135deg, #ffffff 0%, #a855f7 100%);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
-    position: relative;
-    display: inline-block;
-    text-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
-    letter-spacing: -0.02em;
-  }
-  
-  .welcome-subtitle {
-    color: rgba(255, 255, 255, 0.85);
-    font-size: 1.15rem;
-    margin-top: 0.5rem;
+}
+
+.wallet-header p {
+  margin: 0;
+  color: #cbd5e1;
+  font-size: 1rem;
     line-height: 1.5;
-    max-width: 90%;
-    margin-left: auto;
-    margin-right: auto;
   }
   
-  .connect-button-container {
+/* Nebula Logo */
+.nebula-logo {
+  display: inline-block;
     position: relative;
+}
+
+.nebula-logo.animate {
+  animation: logoFloat 4s ease-in-out infinite;
+}
+
+.nebula-logo .outer-ring {
+  animation: rotate 20s linear infinite;
+}
+
+.nebula-logo .middle-ring {
+  animation: rotate 15s linear infinite reverse;
+}
+
+.nebula-logo .inner-core {
+  animation: pulse 2s ease-in-out infinite;
+}
+
+.nebula-logo .dot {
+  animation: sparkle 3s ease-in-out infinite;
+}
+
+.nebula-logo .dot-2 {
+  animation-delay: 1s;
+}
+
+.nebula-logo .dot-3 {
+  animation-delay: 2s;
+}
+
+@keyframes logoFloat {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-10px); }
+}
+
+@keyframes rotate {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 0.8; transform: scale(1); }
+  50% { opacity: 1; transform: scale(1.1); }
+}
+
+@keyframes sparkle {
+  0%, 100% { opacity: 0.6; transform: scale(1); }
+  50% { opacity: 1; transform: scale(1.3); }
+}
+
+/* Wallet warning */
+.wallet-warning {
     display: flex;
-    flex-direction: column;
+  align-items: flex-start;
+  gap: 1rem;
+  padding: 1.5rem;
+  margin-bottom: 2rem;
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  border-radius: 16px;
+  backdrop-filter: blur(10px);
+}
+
+.warning-icon {
+  font-size: 1.5rem;
+  line-height: 1;
+}
+
+.wallet-warning h4 {
+  margin: 0 0 0.5rem 0;
+  color: #fef2f2;
+  font-size: 1.1rem;
+  font-weight: 600;
+}
+
+.wallet-warning p {
+  margin: 0 0 1rem 0;
+  color: #fecaca;
+  font-size: 0.9rem;
+  line-height: 1.4;
+}
+
+.install-link {
+  color: #60a5fa;
+  text-decoration: none;
+  font-weight: 500;
+  font-size: 0.9rem;
+  transition: color 0.3s ease;
+}
+
+.install-link:hover {
+  color: #93c5fd;
+}
+
+/* Wallet option */
+.wallet-option {
+  padding: 1.5rem;
+  margin-bottom: 2rem;
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 16px;
+  transition: all 0.3s ease;
+}
+
+.wallet-option:hover {
+  background: rgba(255, 255, 255, 0.05);
+  border-color: rgba(139, 92, 246, 0.3);
+  transform: translateY(-2px);
+}
+
+.wallet-info {
+    display: flex;
     align-items: center;
-    margin: 2.5rem 0 1rem;
-    transform-style: preserve-3d;
-  }
-  
-  .connect-button {
-    background: linear-gradient(45deg, var(--primary), var(--secondary));
-    color: white;
-    border: none;
-    padding: 1.125rem 2.5rem;
-    border-radius: var(--border-radius-md);
-    font-size: 1.125rem;
+  gap: 1rem;
+}
+
+.wallet-info h4 {
+  margin: 0 0 0.25rem 0;
+  color: #ffffff;
+  font-size: 1.1rem;
+  font-weight: 600;
+}
+
+.wallet-info p {
+  margin: 0;
+  color: #94a3b8;
+  font-size: 0.9rem;
+}
+
+/* Error message */
+.error-message {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 1rem 1.5rem;
+  margin-bottom: 1.5rem;
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  border-radius: 12px;
+  color: #fecaca;
+  font-size: 0.9rem;
+  line-height: 1.4;
+}
+
+.error-icon {
+  font-size: 1.2rem;
+  line-height: 1;
+}
+
+/* Connect button */
+.connect-btn {
+  width: 100%;
+  padding: 1rem 2rem;
+  background: linear-gradient(135deg, #8B5CF6 0%, #06B6D4 100%);
+  color: white;
+  border: none;
+  border-radius: 16px;
+  font-size: 1.1rem;
     font-weight: 600;
-    cursor: pointer;
+  font-family: 'Space Grotesk', sans-serif;
+  cursor: pointer;
+  transition: all 0.3s ease;
     position: relative;
-    overflow: hidden;
-    width: 100%;
-    max-width: 300px;
-    transform-style: preserve-3d;
-    transform: translateZ(0);
-    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2), 0 0 20px rgba(139, 92, 246, 0.3);
-    transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
-    z-index: 1;
-    letter-spacing: 0.01em;
-  }
-  
-  .button-text {
-    position: relative;
-    z-index: 2;
-  }
-  
-  .button-glow {
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background: linear-gradient(45deg, var(--primary), var(--secondary));
-    filter: blur(25px);
-    opacity: 0.5;
-    transform: translateZ(-10px);
-    transition: all 0.3s ease;
-  }
-  
-  .connect-button::before {
-    content: "";
-    position: absolute;
-    top: 0;
-    left: -100%;
-    width: 100%;
-    height: 100%;
-    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
-    transition: 0.6s;
-    z-index: 1;
-  }
-  
-  .connect-button:hover {
-    transform: translateY(-5px) translateZ(10px);
-    box-shadow: 0 15px 35px rgba(0, 0, 0, 0.3), 0 0 25px rgba(139, 92, 246, 0.5);
-  }
-  
-  .connect-button:hover .button-glow {
-    opacity: 0.8;
-    filter: blur(30px);
-  }
-  
-  .connect-button:hover::before {
-    left: 100%;
-  }
-  
-  .connect-button:active {
-    transform: translateY(-2px) translateZ(5px);
-  }
-  
-  .connect-button:disabled {
-    background: linear-gradient(45deg, #4b5563, #6b7280);
-    cursor: not-allowed;
-    transform: none;
-  }
-  
-  .connect-button.loading {
-    color: transparent;
-  }
-  
-  .connect-button.loading::after {
-    content: "";
-    position: absolute;
-    left: 50%;
-    top: 50%;
-    transform: translate(-50%, -50%);
-    width: 24px;
-    height: 24px;
-    border: 3px solid rgba(255, 255, 255, 0.3);
-    border-radius: 50%;
-    border-top-color: white;
-    animation: spin 1s linear infinite;
-    z-index: 3;
-  }
-  
-  .wallet-icon-wrapper {
-    background: rgba(30, 31, 46, 0.8);
-    width: 90px;
-    height: 90px;
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    margin: 2rem auto;
-    padding: 1.4rem;
-    border: 1px solid rgba(139, 92, 246, 0.3);
-    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2), 0 0 20px rgba(139, 92, 246, 0.2);
-    position: relative;
-    overflow: hidden;
-    transform-style: preserve-3d;
-    transform: translateZ(5px);
-    transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
-  }
-  
-  .wallet-icon-wrapper::before {
-    content: "";
-    position: absolute;
-    inset: -5px;
-    background: conic-gradient(transparent, rgba(139, 92, 246, 0.5), rgba(99, 102, 241, 0.5), transparent);
-    opacity: 0.6;
-    animation: rotate 6s linear infinite;
-  }
-  
-  .wallet-icon-wrapper::after {
-    content: "";
-    position: absolute;
-    inset: 0;
-    background: rgba(30, 31, 46, 0.8);
-    border-radius: 50%;
-    margin: 2px;
-    z-index: 0;
-  }
-  
-  .wallet-icon-wrapper:hover {
-    transform: translateZ(15px) scale(1.05);
-    box-shadow: 0 15px 35px rgba(0, 0, 0, 0.3), 0 0 25px rgba(139, 92, 246, 0.4);
-  }
-  
-  .wallet-icon {
-    width: 100%;
-    height: 100%;
-    object-fit: contain;
-    position: relative;
-    z-index: 1;
-    filter: drop-shadow(0 2px 5px rgba(0, 0, 0, 0.2));
-  }
-  
-  /* Enhanced network card */
-  .network-card {
-    background: rgba(20, 21, 36, 0.7);
-    border-radius: var(--border-radius-md);
-    border: 1px solid rgba(139, 92, 246, 0.2);
-    overflow: hidden;
-    margin-top: 1.5rem;
-    transform-style: preserve-3d;
-    transform: translateZ(0);
-    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2), 0 0 15px rgba(139, 92, 246, 0.1);
-    transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
-  }
-  
-  .network-card:hover {
-    transform: translateZ(10px);
-    box-shadow: 0 15px 35px rgba(0, 0, 0, 0.3), 0 0 20px rgba(139, 92, 246, 0.2);
-  }
-  
-  .network-header {
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
-    background: rgba(30, 31, 46, 0.95);
-    padding: 1.125rem;
-    border-bottom: 1px solid rgba(139, 92, 246, 0.2);
-  }
-  
-  .network-indicator {
-    width: 12px;
-    height: 12px;
-    border-radius: 50%;
-    background: var(--error);
-    position: relative;
-    box-shadow: 0 0 10px rgba(239, 68, 68, 0.5);
-  }
-  
-  .network-indicator::after {
-    content: "";
-    position: absolute;
-    inset: -4px;
-    border-radius: 50%;
-    border: 2px solid rgba(239, 68, 68, 0.2);
-    animation: pulse-ring 2s cubic-bezier(0.215, 0.61, 0.355, 1) infinite;
-  }
-  
-  .network-title {
-    font-size: 1rem;
-    font-weight: 600;
-    color: rgba(255, 255, 255, 0.9);
-  }
-  
-  .network-content {
-    padding: 1.75rem;
-  }
-  
-  .network-name {
-    font-size: 1.25rem;
-    font-weight: 600;
-    color: var(--primary-light);
-    margin-bottom: 1.25rem;
-    position: relative;
-    display: inline-block;
-  }
-  
-  .network-name::after {
-    content: "";
-    position: absolute;
-    bottom: -8px;
-    left: 0;
-    width: 100%;
-    height: 2px;
-    background: linear-gradient(90deg, transparent, var(--primary-light), transparent);
-  }
-  
-  .network-details {
-    display: grid;
-    grid-template-columns: 1fr;
-    gap: 1rem;
-    text-align: left;
-    margin: 1.5rem 0;
-  }
-  
-  .network-detail {
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
-  }
-  
-  .detail-label {
-    color: rgba(255, 255, 255, 0.7);
-    font-size: 0.9rem;
-    width: 80px;
-    font-weight: 500;
-  }
-  
-  .detail-value {
-    color: rgba(255, 255, 255, 0.95);
-    font-size: 0.9rem;
-    font-family: var(--font-mono);
-    background: rgba(139, 92, 246, 0.15);
-    padding: 0.375rem 0.75rem;
-    border-radius: var(--border-radius-sm);
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-    max-width: 220px;
-    border: 1px solid rgba(139, 92, 246, 0.2);
-  }
-  
-  @keyframes pulse {
-    0%,
-    100% {
-      opacity: 1;
-      transform: scale(1);
-    }
-    50% {
-      opacity: 0.85;
-      transform: scale(0.97);
-    }
-  }
-  
-  @keyframes rotate {
-    from {
-      transform: rotate(0deg);
-    }
-    to {
-      transform: rotate(360deg);
-    }
-  }
-  
-  @keyframes spin {
-    to {
-      transform: translate(-50%, -50%) rotate(360deg);
-    }
-  }
-  
-  @keyframes pulse-ring {
-    0% {
-      transform: scale(0.8);
-      opacity: 0.8;
-    }
-    100% {
-      transform: scale(1.5);
-      opacity: 0;
-    }
-  }
-  
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  margin-bottom: 1.5rem;
+}
+
+.connect-btn:hover:not(:disabled) {
+  transform: translateY(-3px);
+  box-shadow: 0 10px 30px rgba(139, 92, 246, 0.4);
+}
+
+.connect-btn:active:not(:disabled) {
+  transform: translateY(-1px);
+}
+
+.connect-btn.disabled {
+  background: rgba(100, 116, 139, 0.3);
+  cursor: not-allowed;
+  color: #64748b;
+}
+
+.connect-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.7;
+}
+
+/* Spinner */
+.spinner {
+  width: 20px;
+  height: 20px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-radius: 50%;
+  border-top-color: #ffffff;
+  animation: spin 1s ease-in-out infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* Network info */
+.network-info {
+  margin-bottom: 2rem;
+  padding: 1.5rem;
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 16px;
+  text-align: center;
+}
+
+.network-details {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.network-name {
+  color: #ffffff;
+  font-size: 1.1rem;
+  font-weight: 600;
+}
+
+.network-id {
+  color: #94a3b8;
+  font-size: 0.9rem;
+  font-family: 'Orbitron', monospace;
+}
+
+/* Wallet footer */
+.wallet-footer {
+  text-align: center;
+  margin-top: 1rem;
+}
+
+.wallet-footer p {
+  margin: 0;
+  color: #64748b;
+  font-size: 0.85rem;
+  line-height: 1.4;
+}
+
+/* Glass effect utility */
+.glass-effect {
+  background: rgba(255, 255, 255, 0.02);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 
+    0 8px 32px rgba(0, 0, 0, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+}
+
+/* Responsive design */
   @media (max-width: 640px) {
     .wallet-prompt {
       padding: 1rem;
-      min-height: calc(100vh - 150px);
-    }
+  }
   
-    .wallet-prompt-content {
-      padding: 2.5rem 1.75rem;
-      max-width: 100%;
-    }
+  .wallet-card {
+    padding: 2rem 1.5rem;
+    margin: 1rem;
+  }
   
-    .nebula-logo {
-      width: 80px;
-      height: 80px;
-      font-size: 2.25rem;
-    }
+  .wallet-header h2 {
+    font-size: 1.6rem;
+  }
   
-    .welcome-title {
-      font-size: 1.875rem;
-    }
+  .wallet-header p {
+    font-size: 0.9rem;
+  }
   
-    .welcome-subtitle {
+  .connect-btn {
+    padding: 0.875rem 1.5rem;
       font-size: 1rem;
     }
   
-    .connect-button {
-      padding: 1rem 1.75rem;
-      font-size: 1.0625rem;
-    }
+  .connected-card {
+    margin: 1rem;
+    padding: 1.5rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .wallet-card {
+    border-radius: 20px;
+    padding: 1.5rem 1rem;
+  }
   
-    .network-details {
-      gap: 0.75rem;
-    }
+  .wallet-header h2 {
+    font-size: 1.4rem;
+  }
   
-    .detail-value {
-      max-width: 170px;
-    }
-  
-    .wallet-icon-wrapper {
-      width: 80px;
-      height: 80px;
+  .wallet-warning,
+  .wallet-option,
+  .network-info {
+    padding: 1rem;
     }
   }
   

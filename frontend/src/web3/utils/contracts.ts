@@ -9,6 +9,13 @@ import DisputesABI from '../contracts/Disputes.json';
 import MilestoneOracleABI from '../contracts/MilestoneOracle.json';
 import FundingEscrowABI from '../contracts/FundingEscrow.json';
 import NEBLSwapABI from '../contracts/NEBLSwap.json';
+
+// Import new contract ABIs
+// Note: These are imported directly from the artifacts directory
+import RegistryABI from '../contracts/Registry.json';
+import IPAssetABI from '../contracts/IPAsset.json';
+import LicenseModuleABI from '../contracts/LicenseModule.json';
+import RoyaltyModuleABI from '../contracts/RoyaltyModule.json';
 import { IPTokenData } from '../../types/ipTokens';
 import { ipfsService } from './ipfs';
 
@@ -422,6 +429,8 @@ export class ContractInterface {
     async getIPToken() {
         return (await this.getContract('IPToken', IPTokenABI.abi)).contract;
     }
+
+    // New modular contracts are already defined elsewhere in this file
 
     async getNEBLToken() {
         if (!this.signer) throw new Error("No signer available");
@@ -1191,6 +1200,235 @@ export class ContractInterface {
         throw new Error('Verification challenges are not supported in this version');
     }
 
+    // New IP Asset Management Methods
+    async createIPAsset(metadata: any) {
+        try {
+            const ipAsset = await this.getIPAsset();
+            const tx = await ipAsset.createIP(metadata);
+            const receipt = await tx.wait();
+
+            // Find the token ID from the event
+            const event = receipt.events?.find((e: ethers.Event) => e.event === 'Transfer');
+            const tokenId = event?.args?.tokenId || event?.args?.[2]; // Fallback to third arg which is usually tokenId in ERC721
+
+            return { success: true, tokenId: tokenId?.toString(), tx: receipt };
+        } catch (error) {
+            console.error('Error creating IP asset:', error);
+            return { success: false, error };
+        }
+    }
+
+    async getIPAssetMetadata(tokenId: string) {
+        try {
+            const ipAsset = await this.getIPAsset();
+            const metadata = await ipAsset.getIPMetadata(tokenId);
+            const owner = await ipAsset.ownerOf(tokenId);
+
+            return {
+                success: true,
+                metadata,
+                owner,
+                tokenId
+            };
+        } catch (error) {
+            console.error(`Error getting IP asset ${tokenId}:`, error);
+            return { success: false, error };
+        }
+    }
+
+    async createDerivativeIP(parentTokenId: string, metadata: any) {
+        try {
+            const ipAsset = await this.getIPAsset();
+            const tx = await ipAsset.createDerivativeIP(parentTokenId, metadata);
+            const receipt = await tx.wait();
+
+            // Find the token ID from the event
+            const event = receipt.events?.find((e: ethers.Event) => e.event === 'Transfer');
+            const tokenId = event?.args?.tokenId || event?.args?.[2]; // Fallback to third arg which is usually tokenId in ERC721
+
+            return { success: true, tokenId: tokenId?.toString(), tx: receipt };
+        } catch (error) {
+            console.error('Error creating derivative IP:', error);
+            return { success: false, error };
+        }
+    }
+
+    // License Module Methods
+    async createLicense(ipTokenId: string, licenseData: any) {
+        try {
+            const licenseModule = await this.getLicenseModule();
+            const tx = await licenseModule.createLicense(ipTokenId, licenseData);
+            const receipt = await tx.wait();
+
+            // Find the license ID from the event
+            const event = receipt.events?.find((e: ethers.Event) => e.event === 'LicenseCreated');
+            const licenseId = event?.args?.licenseId;
+
+            return { success: true, licenseId: licenseId?.toString(), tx: receipt };
+        } catch (error) {
+            console.error('Error creating license:', error);
+            return { success: false, error };
+        }
+    }
+
+    async getLicense(licenseId: string) {
+        try {
+            const licenseModule = await this.getLicenseModule();
+            const licenseData = await licenseModule.getLicense(licenseId);
+            const owner = await licenseModule.ownerOf(licenseId);
+
+            return {
+                success: true,
+                licenseData,
+                owner,
+                licenseId
+            };
+        } catch (error) {
+            console.error(`Error getting license ${licenseId}:`, error);
+            return { success: false, error };
+        }
+    }
+
+    // Royalty Module Methods
+    async setRoyaltyInfo(ipTokenId: string, receiver: string, royaltyPercentage: number) {
+        try {
+            const royaltyModule = await this.getRoyaltyModule();
+            const tx = await royaltyModule.setRoyaltyInfo(ipTokenId, receiver, royaltyPercentage);
+            const receipt = await tx.wait();
+
+            return { success: true, tx: receipt };
+        } catch (error) {
+            console.error('Error setting royalty info:', error);
+            return { success: false, error };
+        }
+    }
+
+    async getRoyaltyInfo(ipTokenId: string, salePrice: string) {
+        try {
+            const royaltyModule = await this.getRoyaltyModule();
+            const royaltyInfo = await royaltyModule.royaltyInfo(ipTokenId, salePrice);
+
+            return {
+                success: true,
+                receiver: royaltyInfo[0],
+                royaltyAmount: royaltyInfo[1].toString()
+            };
+        } catch (error) {
+            console.error(`Error getting royalty info for token ${ipTokenId}:`, error);
+            return { success: false, error };
+        }
+    }
+
+    // Methods for IPManagementDashboard
+    async getOwnedIPAssets(address: string) {
+        try {
+            const ipAsset = await this.getIPAsset();
+            const assets = [];
+
+            // Alternative approach: Query transfer events to find owned tokens
+            // Use a limited block range to avoid RPC timeouts
+            const currentBlock = await this.provider.getBlockNumber();
+            const fromBlock = Math.max(0, currentBlock - 10000); // Last ~10k blocks only
+            
+            const filter = ipAsset.filters.Transfer(null, address);
+            const events = await ipAsset.queryFilter(filter, fromBlock, currentBlock);
+            
+            // Get unique token IDs that were transferred to this address
+            const ownedTokenIds = new Set<string>();
+            
+            for (const event of events) {
+                const tokenId = event.args?.tokenId?.toString();
+                if (tokenId) {
+                    // Check if the address still owns this token
+                    try {
+                        const currentOwner = await ipAsset.ownerOf(tokenId);
+                        if (currentOwner.toLowerCase() === address.toLowerCase()) {
+                            ownedTokenIds.add(tokenId);
+                        }
+                    } catch (error) {
+                        // Token might not exist anymore, skip it
+                        continue;
+                    }
+                }
+            }
+
+            // Fetch metadata for each owned token
+            for (const tokenId of Array.from(ownedTokenIds)) {
+                try {
+                    const metadata = await ipAsset.getIPMetadata(tokenId);
+                    assets.push({
+                        tokenId,
+                        metadata,
+                        owner: address
+                    });
+                } catch (error) {
+                    console.warn(`Failed to get metadata for token ${tokenId}:`, error);
+                    // Add token without metadata
+                    assets.push({
+                        tokenId,
+                        metadata: {
+                            title: `IP Asset #${tokenId}`,
+                            description: 'Metadata unavailable',
+                            contentURI: '',
+                            tags: [],
+                            category: 'Unknown'
+                        },
+                        owner: address
+                    });
+                }
+            }
+
+            return assets;
+        } catch (error) {
+            console.error('Error getting owned IP assets:', error);
+            return [];
+        }
+    }
+
+    async getLicensedIPAssets(address: string) {
+        try {
+            const licenseModule = await this.getLicenseModule();
+            const assets = [];
+
+            // Check if tokenOfOwnerByIndex exists in the license module
+            if (typeof licenseModule.tokenOfOwnerByIndex === 'function') {
+                try {
+                    // Get the balance of the address
+                    const balance = await licenseModule.balanceOf(address);
+
+                    // Fetch each license
+                    for (let i = 0; i < balance; i++) {
+                        const licenseId = await licenseModule.tokenOfOwnerByIndex(address, i);
+                        const license = await licenseModule.getLicense(licenseId);
+
+                        // Get the IP asset details
+                        const ipAsset = await this.getIPAsset();
+                        const metadata = await ipAsset.getIPMetadata(license.ipTokenId);
+                        const owner = await ipAsset.ownerOf(license.ipTokenId);
+
+                        assets.push({
+                            tokenId: license.ipTokenId.toString(),
+                            licenseId: licenseId.toString(),
+                            metadata,
+                            owner,
+                            licenseData: license
+                        });
+                    }
+                } catch (error) {
+                    console.warn('Failed to use tokenOfOwnerByIndex for licenses:', error);
+                    // Fall back to event querying if needed
+                }
+            } else {
+                console.warn('tokenOfOwnerByIndex not available in license module');
+            }
+
+            return assets;
+        } catch (error) {
+            console.error('Error getting licensed IP assets:', error);
+            return [];
+        }
+    }
+
     async getVerificationMetrics(projectId: string, milestoneId: string) {
         const oracle = await this.getMilestoneOracle();
         if (!oracle || !oracle.contract) {
@@ -1756,5 +1994,81 @@ export class ContractInterface {
         const signer = this.getSigner();
         const marketplace = await this.getIPMarketplace();
         return await marketplace.connect(signer).getListing(listingId);
+    }
+
+    // New modular contract methods
+
+    async getRegistry() {
+        if (!this.contracts.has('Registry')) {
+            const address = WEB3_CONFIG.CONTRACTS.Registry.address;
+            const contract = new BaseContract(
+                this.provider,
+                address,
+                RegistryABI.abi,
+                this.signer,
+                this.fallbackProviders
+            );
+            this.contracts.set('Registry', contract);
+        }
+        return this.contracts.get('Registry')!.contract;
+    }
+
+    async getIPAsset() {
+        if (!this.contracts.has('IPAsset')) {
+            const address = WEB3_CONFIG.CONTRACTS.IPAsset.address;
+            const contract = new BaseContract(
+                this.provider,
+                address,
+                IPAssetABI.abi,
+                this.signer,
+                this.fallbackProviders
+            );
+            this.contracts.set('IPAsset', contract);
+        }
+        return this.contracts.get('IPAsset')!.contract;
+    }
+
+    async getLicenseModule() {
+        if (!this.contracts.has('LicenseModule')) {
+            const address = WEB3_CONFIG.CONTRACTS.LicenseModule.address;
+            const contract = new BaseContract(
+                this.provider,
+                address,
+                LicenseModuleABI.abi,
+                this.signer,
+                this.fallbackProviders
+            );
+            this.contracts.set('LicenseModule', contract);
+        }
+        return this.contracts.get('LicenseModule')!.contract;
+    }
+
+    async getRoyaltyModule() {
+        if (!this.contracts.has('RoyaltyModule')) {
+            const address = WEB3_CONFIG.CONTRACTS.RoyaltyModule.address;
+            const contract = new BaseContract(
+                this.provider,
+                address,
+                RoyaltyModuleABI.abi,
+                this.signer,
+                this.fallbackProviders
+            );
+            this.contracts.set('RoyaltyModule', contract);
+        }
+        return this.contracts.get('RoyaltyModule')!.contract;
+    }
+
+    // IP Asset methods - using the implementations from above
+
+    // License methods - using the implementations from above
+
+    // Royalty methods - using the implementations from above
+
+    async payRoyalty(ipTokenId: number, amount: string) {
+        const signer = this.getSigner();
+        const royaltyModule = await this.getRoyaltyModule();
+
+        const amountWei = ethers.utils.parseEther(amount);
+        return await royaltyModule.connect(signer).payRoyalty(ipTokenId, { value: amountWei });
     }
 }

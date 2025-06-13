@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useWeb3 } from '../web3/hooks/useWeb3';
+import { useWeb3Context } from '../web3/providers/Web3Provider';
 import OwnedTokens from './OwnedTokens';
 import './CreateListing.css';
 
@@ -9,7 +9,7 @@ export interface CreateListingProps {
 }
 
 const CreateListing: React.FC<CreateListingProps> = ({ onListingCreated, initialTokenId }) => {
-    const { contractInterface, account } = useWeb3();
+    const { contractInterface, account } = useWeb3Context();
     const [tokenId, setTokenId] = useState(initialTokenId || '');
     const [price, setPrice] = useState('');
     const [isLicense, setIsLicense] = useState(false);

@@ -97,6 +97,75 @@
   border-radius: 4px;
 }
 
+.no-nebl-tokens {
+  background: var(--glass-bg);
+  backdrop-filter: blur(10px);
+  border: 1px solid var(--glass-border);
+  padding: 2rem;
+  border-radius: 16px;
+  text-align: center;
+  transition: all 0.3s ease;
+}
+
+.no-nebl-tokens:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 4px 20px var(--glow-shadow);
+}
+
+.no-nebl-tokens h2 {
+  color: rgb(var(--foreground-rgb));
+  margin: 0 0 1rem 0;
+  font-size: 1.8rem;
+  background: linear-gradient(45deg, #8B5CF6, #E0E7FF);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.no-nebl-tokens p {
+  color: rgba(var(--foreground-rgb), 0.7);
+  margin-bottom: 1rem;
+  font-size: 1.1rem;
+}
+
+.no-nebl-tokens ul {
+  text-align: left;
+  color: rgba(var(--foreground-rgb), 0.8);
+  margin: 1.5rem 0;
+  padding-left: 1.5rem;
+}
+
+.no-nebl-tokens li {
+  margin: 0.5rem 0;
+  line-height: 1.5;
+}
+
+.get-nebl-button {
+  background: linear-gradient(45deg, #10B981, #34D399);
+  color: white;
+  padding: 1rem 2rem;
+  border-radius: 12px;
+  border: none;
+  font-size: 1.1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  margin-top: 1rem;
+  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+}
+
+.get-nebl-button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(16, 185, 129, 0.4);
+  background: linear-gradient(45deg, #059669, #10B981);
+}
+
+.form-group small {
+  color: rgba(var(--foreground-rgb), 0.6);
+  font-size: 0.9rem;
+  margin-top: 0.25rem;
+}
+
 .stake-form form {
     display: flex;
     flex-direction: column;

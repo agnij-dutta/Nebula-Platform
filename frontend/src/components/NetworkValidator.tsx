@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { WEB3_CONFIG } from '../web3/config';
-import { useWeb3 } from '../web3/hooks/useWeb3';
+import { useWeb3Context } from '../web3/providers/Web3Provider';
 import './NetworkValidator.css';
 
 const AUTO_RETRY_INTERVAL = 5000;
@@ -8,7 +8,7 @@ const MAX_VALIDATION_ATTEMPTS = 3;
 const RPC_TIMEOUT = 5000;
 
 const NetworkValidator = () => {
-    const { provider, chainId, switchToFujiTestnet } = useWeb3();
+    const { chainId, switchToFujiTestnet } = useWeb3Context();
     const [networkError, setNetworkError] = useState<string>('');
     const [rpcStatus, setRpcStatus] = useState<'connecting' | 'connected' | 'error'>('connecting');
     const [isValidating, setIsValidating] = useState(false);
@@ -35,7 +35,7 @@ const NetworkValidator = () => {
             });
 
             clearTimeout(timeoutId);
-            
+
             if (!response.ok) {
                 console.warn(`RPC endpoint ${providerUrl} returned status ${response.status}`);
                 return false;
@@ -55,7 +55,7 @@ const NetworkValidator = () => {
     }, []);
 
     const validateNetwork = useCallback(async () => {
-        if (!provider || isValidating || validationAttempts >= MAX_VALIDATION_ATTEMPTS) {
+        if (isValidating || validationAttempts >= MAX_VALIDATION_ATTEMPTS) {
             return;
         }
 
@@ -77,11 +77,12 @@ const NetworkValidator = () => {
                 }
             }
 
-            // Try each RPC endpoint, starting with the official Avalanche RPC
+            // Use Avalanche Fuji RPC URLs
             const rpcUrls = WEB3_CONFIG.NETWORKS.TESTNET.rpcUrl;
+
             let connected = false;
 
-            // Test official Avalanche RPC first
+            // Test first RPC endpoint
             if (await testConnection(rpcUrls[0])) {
                 connected = true;
             } else {
@@ -94,14 +95,9 @@ const NetworkValidator = () => {
             }
 
             if (connected) {
-                try {
-                    await provider.getBlockNumber();
-                    setRpcStatus('connected');
-                    setNetworkError('');
-                    setValidationAttempts(0);
-                } catch (err) {
-                    throw new Error('Failed to fetch block number');
-                }
+                setRpcStatus('connected');
+                setNetworkError('');
+                setValidationAttempts(0);
             } else {
                 throw new Error('All RPC endpoints failed');
             }
@@ -123,7 +119,7 @@ const NetworkValidator = () => {
         } finally {
             setIsValidating(false);
         }
-    }, [provider, chainId, switchToFujiTestnet, isValidating, validationAttempts, testConnection]);
+    }, [chainId, switchToFujiTestnet, isValidating, validationAttempts, testConnection]);
 
     useEffect(() => {
         validateNetwork();
@@ -161,7 +157,7 @@ const NetworkValidator = () => {
                             </div>
                         )}
                         {showRpcRetry && (
-                            <button 
+                            <button
                                 onClick={() => {
                                     setValidationAttempts(0);
                                     setIsValidating(false);

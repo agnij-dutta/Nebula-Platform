@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { ethers } from 'ethers';
-import { useWeb3 } from '../web3/hooks/useWeb3';
+import { useWeb3Context } from '../web3/providers/Web3Provider';
 import { ipfsService } from '../web3/utils/ipfs';
 import { IPTokenData } from '../types/ipTokens';
 import WalletPrompt from './WalletPrompt';
@@ -11,7 +11,7 @@ import './ListingsContainer.css';
 const ITEMS_PER_PAGE = 12;
 
 const ListingsContainer: React.FC = () => {
-    const { contractInterface, account, needsWallet, connectWallet } = useWeb3();
+    const { contractInterface, account, needsWallet, connectWallet } = useWeb3Context();
     const [listings, setListings] = useState<IPTokenData[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
